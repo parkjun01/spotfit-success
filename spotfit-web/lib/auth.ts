@@ -5,8 +5,8 @@ import { supabaseAdmin } from './supabase';
 const JWT_SECRET = process.env.JWT_SECRET!;
 
 export const signTokens = (userId: string) => ({
-  access: jwt.sign({ userId }, JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }),
-  refresh: jwt.sign({ userId, type: 'refresh' }, JWT_SECRET, { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' }),
+  access: jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' }),
+  refresh: jwt.sign({ userId, type: 'refresh' }, JWT_SECRET, { expiresIn: '30d' }),
 });
 
 export const verifyToken = (token: string): { userId: string } => {
