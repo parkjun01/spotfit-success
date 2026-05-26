@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -25,6 +26,7 @@ const STATUS_COLOR: Record<string, string> = {
 const DIFFICULTY: Record<string, string> = { beginner: '초급', intermediate: '중급', advanced: '고급' };
 
 export default function HomePage() {
+  const router = useRouter();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const [spots, setSpots] = useState<Spot[]>([]);
@@ -36,6 +38,10 @@ export default function HomePage() {
   const markersRef = useRef<any[]>([]);
 
   useEffect(() => {
+    if (!localStorage.getItem('access_token')) {
+      router.push('/login');
+      return;
+    }
     fetch('/api/sports').then(r => r.json()).then(d => setSports(d.data || []));
     navigator.geolocation?.getCurrentPosition(
       pos => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
