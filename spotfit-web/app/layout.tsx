@@ -16,8 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* 네이버맵 JS API */}
         <script
           type="text/javascript"
-          src={`https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID}`}
-          defer
+          src={`https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID}&submodules=geocoder`}
         />
       </head>
       <body className="max-w-md mx-auto min-h-screen bg-gray-50">
