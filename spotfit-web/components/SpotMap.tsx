@@ -1,17 +1,61 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-});
+// 종목별 색상 매핑
+const SPORT_COLORS: Record<string, string> = {
+  '축구':       '#16A34A',
+  '풋살':       '#22C55E',
+  '농구':       '#EA580C',
+  '야구':       '#2563EB',
+  '소프트볼':   '#3B82F6',
+  '야구/소프트볼': '#2563EB',
+  '배드민턴':   '#9333EA',
+  '테니스':     '#CA8A04',
+  '탁구':       '#0891B2',
+  '수영':       '#06B6D4',
+  '러닝':       '#DC2626',
+  '등산':       '#78350F',
+  '클라이밍':   '#C2410C',
+  '요가':       '#DB2777',
+  '필라테스':   '#EC4899',
+  '헬스':       '#475569',
+  '골프':       '#15803D',
+  '볼링':       '#7C3AED',
+  '배구':       '#D97706',
+  '핸드볼':     '#0D9488',
+};
+
+const COLOR_POOL = [
+  '#4F46E5','#0891B2','#16A34A','#EA580C','#9333EA',
+  '#DC2626','#CA8A04','#0D9488','#DB2777','#78350F',
+];
+
+function getSportColor(sportName: string): string {
+  if (SPORT_COLORS[sportName]) return SPORT_COLORS[sportName];
+  // 이름 해시로 색상 결정
+  let hash = 0;
+  for (let i = 0; i < sportName.length; i++) hash = sportName.charCodeAt(i) + ((hash << 5) - hash);
+  return COLOR_POOL[Math.abs(hash) % COLOR_POOL.length];
+}
+
+function createSpotIcon(color: string, isFull: boolean) {
+  const bg = isFull ? '#94A3B8' : color;
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      width:14px;height:14px;
+      background:${bg};
+      border:2.5px solid white;
+      border-radius:50%;
+      box-shadow:0 2px 6px rgba(0,0,0,0.35);
+    "></div>`,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+  });
+}
 
 const myLocationIcon = L.divIcon({
   className: '',
@@ -51,11 +95,9 @@ function LocateButton({ onLocate }: { onLocate: (lat: number, lng: number) => vo
       onClick={handleClick}
       style={{
         position: 'absolute',
-        bottom: 80,
-        right: 12,
+        bottom: 80, right: 12,
         zIndex: 1000,
-        width: 44,
-        height: 44,
+        width: 44, height: 44,
         borderRadius: '50%',
         background: 'white',
         border: 'none',
@@ -66,10 +108,39 @@ function LocateButton({ onLocate }: { onLocate: (lat: number, lng: number) => vo
         alignItems: 'center',
         justifyContent: 'center',
       }}
-      title="현재 위치"
     >
       {loading ? '⏳' : '📍'}
     </button>
+  );
+}
+
+// 종목 범례
+function Legend({ sports }: { sports: string[] }) {
+  if (sports.length === 0) return null;
+  return (
+    <div style={{
+      position: 'absolute',
+      bottom: 12, left: 12,
+      zIndex: 1000,
+      background: 'white',
+      borderRadius: 10,
+      padding: '8px 10px',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+      fontSize: 11,
+      maxWidth: 130,
+    }}>
+      {sports.map(name => (
+        <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+          <div style={{
+            width: 10, height: 10,
+            borderRadius: '50%',
+            background: getSportColor(name),
+            flexShrink: 0,
+          }} />
+          <span style={{ color: '#374151' }}>{name}</span>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -85,19 +156,19 @@ export default function SpotMap({ spots, userLocation }: {
 }) {
   const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(null);
 
+  const uniqueSports = [...new Set(spots.map(s => s.sport_name))];
+
   return (
     <MapContainer
       center={[userLocation.lat, userLocation.lng]}
       zoom={14}
       style={{ width: '100%', height: '100%' }}
-      zoomControl={true}
     >
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
       />
 
-      {/* 현재 위치 마커 */}
       {myLocation && (
         <>
           <Marker position={[myLocation.lat, myLocation.lng]} icon={myLocationIcon}>
@@ -111,18 +182,28 @@ export default function SpotMap({ spots, userLocation }: {
         </>
       )}
 
-      {/* 스팟 마커들 */}
       {spots.map(spot =>
         spot.latitude && spot.longitude ? (
-          <Marker key={spot.id} position={[spot.latitude, spot.longitude]}>
+          <Marker
+            key={spot.id}
+            position={[spot.latitude, spot.longitude]}
+            icon={createSpotIcon(getSportColor(spot.sport_name), spot.status === 'full')}
+          >
             <Popup>
               <div style={{ minWidth: 160 }}>
-                <strong style={{ fontSize: 14 }}>{spot.title}</strong>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <div style={{
+                    width: 10, height: 10, borderRadius: '50%',
+                    background: getSportColor(spot.sport_name), flexShrink: 0,
+                  }} />
+                  <strong style={{ fontSize: 14 }}>{spot.title}</strong>
+                </div>
                 <p style={{ margin: '4px 0', fontSize: 12, color: '#666' }}>
                   {spot.sport_name} · {spot.location_name}
                 </p>
                 <p style={{ margin: '4px 0', fontSize: 12 }}>
                   👥 {spot.current_participants}/{spot.max_participants}명
+                  {spot.status === 'full' && <span style={{ color: '#EF4444', marginLeft: 4 }}>마감</span>}
                 </p>
                 <a
                   href={`/spots/${spot.id}`}
@@ -137,6 +218,7 @@ export default function SpotMap({ spots, userLocation }: {
       )}
 
       <LocateButton onLocate={(lat, lng) => setMyLocation({ lat, lng })} />
+      <Legend sports={uniqueSports} />
     </MapContainer>
   );
 }

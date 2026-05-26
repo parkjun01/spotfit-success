@@ -38,7 +38,7 @@ git push -u origin main
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service_role key |
 | `JWT_SECRET` | 랜덤 32자 이상 문자열 |
-| `ENCRYPTION_KEY` | 32자 암호화 키 |
+|` | 32자 암호화 키 |
 | `NEXT_PUBLIC_NAVER_MAP_CLIENT_ID` | 네이버 클라우드 콘솔 Client ID |
 | `NEXT_PUBLIC_TOSS_CLIENT_KEY` | 토스페이먼츠 Client Key |
 | `TOSS_SECRET_KEY` | 토스페이먼츠 Secret Key |
