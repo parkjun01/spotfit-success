@@ -1,13 +1,12 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
-declare global {
-  interface Window { naver: any; }
-}
+const SpotMap = dynamic(() => import('@/components/SpotMap'), { ssr: false });
 
 interface Spot {
   id: string; title: string; sport_name: string; location_name: string;
@@ -27,15 +26,12 @@ const DIFFICULTY: Record<string, string> = { beginner: '초급', intermediate: '
 
 export default function HomePage() {
   const router = useRouter();
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<any>(null);
   const [spots, setSpots] = useState<Spot[]>([]);
   const [sports, setSports] = useState<{ id: string; name: string }[]>([]);
   const [selectedSport, setSelectedSport] = useState('');
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
   const [userLocation, setUserLocation] = useState({ lat: 37.5665, lng: 126.978 });
   const [loading, setLoading] = useState(true);
-  const markersRef = useRef<any[]>([]);
 
   useEffect(() => {
     if (!localStorage.getItem('access_token')) {
@@ -63,45 +59,6 @@ export default function HomePage() {
       setSpots(data.data || []);
     } finally { setLoading(false); }
   };
-
-  // 네이버맵 초기화
-  useEffect(() => {
-    if (viewMode !== 'map' || !mapRef.current) return;
-    const init = () => {
-      if (!window.naver?.maps) return;
-      mapInstance.current = new window.naver.maps.Map(mapRef.current, {
-        center: new window.naver.maps.LatLng(userLocation.lat, userLocation.lng),
-        zoom: 14,
-        mapTypeControl: false,
-      });
-      renderMarkers();
-    };
-    if (window.naver?.maps) init();
-    else { const t = setInterval(() => { if (window.naver?.maps) { init(); clearInterval(t); } }, 200); }
-  }, [viewMode, userLocation]);
-
-  const renderMarkers = () => {
-    if (!mapInstance.current) return;
-    markersRef.current.forEach(m => m.setMap(null));
-    markersRef.current = spots.map(spot => {
-      if (!spot.latitude || !spot.longitude) return null;
-      const marker = new window.naver.maps.Marker({
-        position: new window.naver.maps.LatLng(spot.latitude, spot.longitude),
-        map: mapInstance.current,
-        title: spot.title,
-        icon: {
-          content: `<div class="px-2 py-1 rounded-full text-xs font-bold shadow-md ${spot.status === 'full' ? 'bg-red-500' : 'bg-indigo-600'} text-white whitespace-nowrap">${spot.sport_name}</div>`,
-          anchor: new window.naver.maps.Point(20, 10),
-        },
-      });
-      window.naver.maps.Event.addListener(marker, 'click', () => {
-        window.location.href = `/spots/${spot.id}`;
-      });
-      return marker;
-    }).filter(Boolean);
-  };
-
-  useEffect(() => { if (viewMode === 'map') renderMarkers(); }, [spots]);
 
   const mannerColor = (score: number) =>
     score >= 38 ? 'text-emerald-600' : score >= 30 ? 'text-amber-500' : 'text-red-500';
@@ -147,7 +104,7 @@ export default function HomePage() {
       {/* 콘텐츠 */}
       <main className="flex-1 overflow-hidden relative">
         {viewMode === 'map' ? (
-          <div ref={mapRef} className="w-full h-full" />
+          <SpotMap spots={spots} userLocation={userLocation} />
         ) : (
           <div className="h-full overflow-y-auto p-4 space-y-3">
             {loading && <div className="text-center text-gray-400 pt-12">로딩 중...</div>}
