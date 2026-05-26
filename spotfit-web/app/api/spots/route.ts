@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await requireAuth(req);
     const body = await req.json();
-    const { sportId, title, description, locationName, latitude, longitude, maxParticipants, difficultyLevel, startsAt, tagIds = [] } = body;
+    const { sportId, title, description, locationName, latitude, longitude, maxParticipants, difficultyLevel, startsAt, tagIds = [], minAge = null, maxAge = null } = body;
 
     if (!sportId || !title || !locationName || !latitude || !longitude || !maxParticipants || !startsAt) {
       return error('필수 항목이 누락되었습니다');
@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
         max_participants: maxParticipants,
         difficulty_level: difficultyLevel || 'beginner',
         starts_at: startsAt, current_participants: 1,
+        min_age: minAge, max_age: maxAge,
       })
       .select()
       .single();
