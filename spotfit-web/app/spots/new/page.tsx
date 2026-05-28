@@ -90,11 +90,14 @@ export default function NewSpotPage() {
     );
   };
 
-  const handleAddressSelect = async (result: { address: string; sido: string; sigungu: string }) => {
-    set('locationName', result.address);
+  const handleAddressSelect = async (result: { address: string; sido: string; sigungu: string; buildingName?: string }) => {
+    // 건물명 있으면 건물명 우선, 없으면 도로명 주소
+    const displayName = result.buildingName?.trim() || result.address;
+    set('locationName', displayName);
     set('latitude', '');
     set('longitude', '');
     try {
+      // 좌표 조회는 전체 주소로 (정확도를 위해)
       const res = await fetch(`/api/geocode?address=${encodeURIComponent(result.address)}`);
       const data = await res.json();
       if (data.success) {
@@ -322,14 +325,22 @@ export default function NewSpotPage() {
             <button
               type="button"
               onClick={() => {
-                if (typeof window !== 'undefined' && window.daum?.Postcode) {
+                const openPostcode = () => {
                   new window.daum.Postcode({
-                    oncomplete: (data: any) => handleAddressSelect({ address: data.roadAddress || data.jibunAddress, sido: data.sido, sigungu: data.sigungu }),
-                    theme: { bgColor: '#4F46E5', searchBgColor: '#4F46E5', queryTextColor: '#FFFFFF' },
+                    oncomplete: (data: any) => handleAddressSelect({ address: data.roadAddress || data.jibunAddress, sido: data.sido, sigungu: data.sigungu, buildingName: data.buildingName }),
+                    theme: { bgColor: '#F97316', searchBgColor: '#F97316', queryTextColor: '#FFFFFF' },
                   }).open();
+                };
+                if (window.daum?.Postcode) {
+                  openPostcode();
+                } else {
+                  const s = document.createElement('script');
+                  s.src = 'https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
+                  s.onload = openPostcode;
+                  document.head.appendChild(s);
                 }
               }}
-              className="py-2.5 rounded-xl border-2 border-primary text-primary text-sm font-semibold hover:bg-indigo-50 transition-colors"
+              className="py-2.5 rounded-xl border-2 border-primary text-primary text-sm font-semibold hover:bg-orange-50 transition-colors"
             >
               🔍 주소 검색
             </button>
