@@ -20,7 +20,7 @@ export default function LoginPage() {
   const [regForm, setRegForm] = useState({
     username: '', password: '', passwordConfirm: '',
     nickname: '', gender: '', age: '',
-    activityRegion: '', homeLat: 0, homeLng: 0,
+    activityRegion: '', addressDetail: '', homeLat: 0, homeLng: 0,
     preferredSports: [] as string[],
   });
 
@@ -92,7 +92,9 @@ export default function LoginPage() {
           nickname: regForm.nickname.trim(),
           gender: regForm.gender,
           age: regForm.age ? parseInt(regForm.age) : null,
-          activityRegion: regForm.activityRegion || null,
+          activityRegion: regForm.activityRegion
+            ? regForm.activityRegion + (regForm.addressDetail ? ' ' + regForm.addressDetail : '')
+            : null,
           homeLat: regForm.homeLat || null,
           homeLng: regForm.homeLng || null,
           preferredSports: regForm.preferredSports,
@@ -318,12 +320,23 @@ export default function LoginPage() {
                     onChange={result =>
                       setRegForm(f => ({
                         ...f,
-                        activityRegion: `${result.sido} ${result.sigungu}`,
+                        activityRegion: result.address,
                         homeLat: result.lat || 0,
                         homeLng: result.lng || 0,
                       }))
                     }
                   />
+                  {regForm.activityRegion && (
+                    <div>
+                      <label className="text-xs font-medium text-gray-600 mb-1 block">상세주소</label>
+                      <input
+                        className="input w-full"
+                        placeholder="동·호수, 건물명 등 (선택)"
+                        value={regForm.addressDetail}
+                        onChange={e => setRegForm(f => ({ ...f, addressDetail: e.target.value }))}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 

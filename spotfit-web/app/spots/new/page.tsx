@@ -92,7 +92,9 @@ export default function NewSpotPage() {
           sportId: form.sportId,
           title: form.title.trim(),
           description: form.description.trim() || null,
-          locationName: form.locationName.trim(),
+          locationName: form.locationDetail.trim()
+            ? `${form.locationName.trim()} ${form.locationDetail.trim()}`
+            : form.locationName.trim(),
           latitude: parseFloat(form.latitude),
           longitude: parseFloat(form.longitude),
           maxParticipants: parseInt(form.maxParticipants),
