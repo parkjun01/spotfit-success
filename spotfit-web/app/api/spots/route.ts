@@ -70,11 +70,21 @@ export async function POST(req: NextRequest) {
     if (minAge !== null) insertData.min_age = minAge;
     if (maxAge !== null) insertData.max_age = maxAge;
 
-    const { data: spot, error: insertErr } = await supabaseAdmin
+    let { data: spot, error: insertErr } = await supabaseAdmin
       .from('spots')
       .insert(insertData)
       .select()
       .single();
+
+    // min_age/max_age 컬럼이 아직 없는 경우 제외하고 재시도
+    if (insertErr?.message?.includes('min_age') || insertErr?.message?.includes('max_age')) {
+      delete insertData.min_age;
+      delete insertData.max_age;
+      const retry = await supabaseAdmin.from('spots').insert(insertData).select().single();
+      spot = retry.data;
+      insertErr = retry.error;
+    }
+
     if (insertErr) throw insertErr;
 
     // 호스트 자동 참여
