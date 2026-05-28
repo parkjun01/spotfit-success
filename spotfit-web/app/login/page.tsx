@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import AddressSearch from '@/components/AddressSearch';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -175,17 +176,14 @@ export default function LoginPage() {
                     maxLength={10}
                   />
                 </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-600 mb-1 block">
-                    활동 지역 <span className="text-gray-400">(선택)</span>
-                  </label>
-                  <input
-                    className="input w-full"
-                    placeholder="예: 서울 강남구"
-                    value={regForm.activityRegion}
-                    onChange={e => setRegForm(f => ({ ...f, activityRegion: e.target.value }))}
-                  />
-                </div>
+                <AddressSearch
+                  label="거주지 (선택)"
+                  value={regForm.activityRegion}
+                  placeholder="주소 검색으로 거주지 등록"
+                  onChange={result =>
+                    setRegForm(f => ({ ...f, activityRegion: `${result.sido} ${result.sigungu}` }))
+                  }
+                />
                 {error && <p className="text-red-500 text-xs">{error}</p>}
                 <button className="btn-primary w-full" onClick={handleRegister} disabled={loading}>
                   {loading ? '가입 중...' : '회원가입'}

@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import AddressSearch from '@/components/AddressSearch';
 
 interface Sport { id: string; name: string; }
 
@@ -51,6 +52,22 @@ export default function NewSpotPage() {
         setLocating(false);
       }
     );
+  };
+
+  const handleAddressSelect = async (result: { address: string; sido: string; sigungu: string }) => {
+    set('locationName', result.address);
+    // Nominatim으로 좌표 자동 조회
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(result.address)}&format=json&limit=1`,
+        { headers: { 'Accept-Language': 'ko' } }
+      );
+      const data = await res.json();
+      if (data[0]) {
+        set('latitude', data[0].lat);
+        set('longitude', data[0].lon);
+      }
+    } catch { /* 좌표 조회 실패 시 현재 위치 사용 안내 */ }
   };
 
   const handleSubmit = async () => {
@@ -234,21 +251,30 @@ export default function NewSpotPage() {
         {/* 장소 */}
         <div className="card space-y-3">
           <p className="text-sm font-bold text-gray-800">장소 <span className="text-red-400">*</span></p>
-          <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">장소명</label>
-            <input
-              className="input w-full"
-              placeholder="예: 강남구 청담동 풋살장"
-              value={form.locationName}
-              onChange={e => set('locationName', e.target.value)}
-            />
-          </div>
+          <AddressSearch
+            label="장소 주소"
+            required
+            value={form.locationName}
+            placeholder="주소 검색"
+            onChange={handleAddressSelect}
+          />
+          {form.locationName && (
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">상세 장소명 (선택)</label>
+              <input
+                className="input w-full"
+                placeholder="예: 3층 풋살장, B동 입구 등"
+                value={form.locationDetail || ''}
+                onChange={e => set('locationDetail', e.target.value)}
+              />
+            </div>
+          )}
           <button
             onClick={useCurrentLocation}
             disabled={locating}
-            className="w-full py-2.5 rounded-xl border border-primary text-primary text-sm font-semibold hover:bg-indigo-50 transition-colors disabled:opacity-50"
+            className="w-full py-2.5 rounded-xl border border-gray-200 text-gray-500 text-sm font-medium hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
           >
-            {locating ? '위치 가져오는 중...' : '📍 현재 위치 사용'}
+            {locating ? '위치 가져오는 중...' : '📍 현재 위치로 대신 설정'}
           </button>
           {form.latitude && form.longitude && (
             <p className="text-xs text-emerald-600 font-medium">
