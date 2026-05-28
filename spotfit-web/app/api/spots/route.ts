@@ -59,11 +59,13 @@ export async function POST(req: NextRequest) {
     }
 
     const insertData: Record<string, any> = {
-      host_id: user.id, sport_id: sportId, title, description,
+      host_id: user.id, sport_id: sportId, title,
+      description: description || null,
       location_name: locationName, latitude, longitude,
       max_participants: maxParticipants,
       difficulty_level: difficultyLevel || 'beginner',
       starts_at: startsAt, current_participants: 1,
+      status: 'recruiting',
     };
     if (minAge !== null) insertData.min_age = minAge;
     if (maxAge !== null) insertData.max_age = maxAge;
@@ -76,7 +78,10 @@ export async function POST(req: NextRequest) {
     if (insertErr) throw insertErr;
 
     // 호스트 자동 참여
-    await supabaseAdmin.from('participations').insert({ spot_id: spot.id, user_id: user.id });
+    const { error: partErr } = await supabaseAdmin
+      .from('participations')
+      .insert({ spot_id: spot.id, user_id: user.id, status: 'joined' });
+    if (partErr) throw partErr;
 
     // 태그 연결
     if (tagIds.length) {

@@ -13,5 +13,6 @@ export const handleError = (err: unknown) => {
     return error(err.message, (err as any).status);
   }
   console.error(err);
-  return error('서버 오류가 발생했습니다', 500);
+  const msg = err instanceof Error ? err.message : (err as any)?.message || '서버 오류가 발생했습니다';
+  return error(msg, 500);
 };
