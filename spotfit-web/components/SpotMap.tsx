@@ -33,17 +33,18 @@ const COLOR_POOL = [
   '#DC2626','#CA8A04','#0D9488','#DB2777','#78350F',
 ];
 
-function getSportColor(sportName: string): string {
+function getSportColor(sportName: string | undefined): string {
+  if (!sportName) return COLOR_POOL[0];
   if (SPORT_COLORS[sportName]) return SPORT_COLORS[sportName];
-  // 이름 해시로 색상 결정
   let hash = 0;
   for (let i = 0; i < sportName.length; i++) hash = sportName.charCodeAt(i) + ((hash << 5) - hash);
   return COLOR_POOL[Math.abs(hash) % COLOR_POOL.length];
 }
 
-function createSpotIcon(color: string, sportName: string, isFull: boolean) {
+function createSpotIcon(color: string, sportName: string | undefined, isFull: boolean) {
   const bg = isFull ? '#94A3B8' : color;
-  const label = sportName.length > 3 ? sportName.slice(0, 3) : sportName;
+  const name = sportName || '?';
+  const label = name.length > 3 ? name.slice(0, 3) : name;
   return L.divIcon({
     className: '',
     html: `<div style="

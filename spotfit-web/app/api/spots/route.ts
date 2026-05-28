@@ -40,7 +40,14 @@ export async function GET(req: NextRequest) {
 
       const { data: spots, error: err2 } = await query;
       if (err2) throw err2;
-      return ok(spots);
+      // fallback 결과를 RPC와 동일한 flat 형태로 변환
+      const normalized = spots?.map((s: any) => ({
+        ...s,
+        sport_name: s.sports?.name || '',
+        host_nickname: s.users?.nickname || '',
+        host_manner_score: s.users?.manner_score ?? null,
+      }));
+      return ok(normalized);
     }
 
     return ok(data);
