@@ -74,26 +74,31 @@ export async function POST(req: NextRequest) {
       .single();
     if (insertErr) throw insertErr;
 
-    // 2단계: 나이제한 update (컬럼이 없어도 스팟 생성은 성공)
+    // 2단계: 나이제한 update (컬럼이 없으면 무시)
     if (minAge !== null || maxAge !== null) {
-      const ageData: Record<string, number> = {};
-      if (minAge !== null) ageData.min_age = minAge;
-      if (maxAge !== null) ageData.max_age = maxAge;
-      await supabaseAdmin.from('spots').update(ageData).eq('id', spot.id);
-      // 컬럼 없으면 조용히 무시
+      try {
+        const ageData: Record<string, number | null> = {};
+        if (minAge !== null) ageData.min_age = minAge;
+        if (maxAge !== null) ageData.max_age = maxAge;
+        const { error: ageErr } = await supabaseAdmin.from('spots').update(ageData).eq('id', spot.id);
+        if (ageErr) console.error('[spot] age update skipped:', ageErr.message);
+      } catch (e) {
+        console.error('[spot] age update exception:', e);
+      }
     }
 
-    // 3단계: 호스트 자동 참여
+    // 3단계: 호스트 자동 참여 (실패해도 스팟 생성은 성공 처리)
     const { error: partErr } = await supabaseAdmin
       .from('participations')
       .insert({ spot_id: spot.id, user_id: user.id });
-    if (partErr) throw partErr;
+    if (partErr) console.error('[spot] participation insert failed:', partErr.message);
 
     // 4단계: 태그 연결
     if (tagIds.length) {
-      await supabaseAdmin.from('spot_tags').insert(
+      const { error: tagErr } = await supabaseAdmin.from('spot_tags').insert(
         tagIds.map((tagId: string) => ({ spot_id: spot.id, tag_id: tagId }))
       );
+      if (tagErr) console.error('[spot] tag insert failed:', tagErr.message);
     }
 
     return created({ spotId: spot.id });
