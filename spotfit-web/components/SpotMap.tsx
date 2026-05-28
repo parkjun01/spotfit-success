@@ -41,19 +41,26 @@ function getSportColor(sportName: string): string {
   return COLOR_POOL[Math.abs(hash) % COLOR_POOL.length];
 }
 
-function createSpotIcon(color: string, isFull: boolean) {
+function createSpotIcon(color: string, sportName: string, isFull: boolean) {
   const bg = isFull ? '#94A3B8' : color;
+  const label = sportName.length > 3 ? sportName.slice(0, 3) : sportName;
   return L.divIcon({
     className: '',
     html: `<div style="
-      width:14px;height:14px;
       background:${bg};
-      border:2.5px solid white;
-      border-radius:50%;
-      box-shadow:0 2px 6px rgba(0,0,0,0.35);
-    "></div>`,
-    iconSize: [14, 14],
-    iconAnchor: [7, 7],
+      color:white;
+      font-size:11px;
+      font-weight:700;
+      padding:3px 7px;
+      border-radius:20px;
+      border:2px solid white;
+      box-shadow:0 2px 6px rgba(0,0,0,0.3);
+      white-space:nowrap;
+      line-height:1.4;
+    ">${label}</div>`,
+    iconSize: [undefined as any, undefined as any],
+    iconAnchor: [20, 12],
+    popupAnchor: [0, -14],
   });
 }
 
@@ -187,7 +194,7 @@ export default function SpotMap({ spots, userLocation }: {
           <Marker
             key={spot.id}
             position={[spot.latitude, spot.longitude]}
-            icon={createSpotIcon(getSportColor(spot.sport_name), spot.status === 'full')}
+            icon={createSpotIcon(getSportColor(spot.sport_name), spot.sport_name, spot.status === 'full')}
           >
             <Popup>
               <div style={{ minWidth: 160 }}>
