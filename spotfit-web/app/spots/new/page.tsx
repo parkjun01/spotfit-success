@@ -40,12 +40,32 @@ export default function NewSpotPage() {
 
   const set = (key: string, value: string) => setForm(f => ({ ...f, [key]: value }));
 
-  const useCurrentLocation = () => {
+  const useCurrentLocation = async () => {
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
-      pos => {
-        set('latitude', String(pos.coords.latitude));
-        set('longitude', String(pos.coords.longitude));
+      async pos => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        set('latitude', String(lat));
+        set('longitude', String(lng));
+        // 좌표 → 주소 변환 (역지오코딩)
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+            { headers: { 'Accept-Language': 'ko' } }
+          );
+          const data = await res.json();
+          if (data?.display_name) {
+            // 한국 주소 형식으로 정리 (시/도 구/군 동/읍/면 까지만)
+            const parts = data.address;
+            const addr = [
+              parts?.city || parts?.province || parts?.state,
+              parts?.city_district || parts?.county || parts?.borough,
+              parts?.suburb || parts?.neighbourhood || parts?.quarter,
+              parts?.road,
+            ].filter(Boolean).join(' ');
+            set('locationName', addr || data.display_name.split(',').slice(0, 3).join(',').trim());
+          }
+        } catch { /* 주소 변환 실패 시 좌표만 설정 */ }
         setLocating(false);
       },
       () => {
@@ -277,7 +297,7 @@ export default function NewSpotPage() {
             disabled={locating}
             className="w-full py-2.5 rounded-xl border border-gray-200 text-gray-500 text-sm font-medium hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
           >
-            {locating ? '위치 가져오는 중...' : '📍 현재 위치로 대신 설정'}
+            {locating ? '주소 변환 중...' : '📍 현재 위치 주소로 자동 입력'}
           </button>
           {form.latitude && form.longitude && (
             <p className="text-xs text-emerald-600 font-medium">
