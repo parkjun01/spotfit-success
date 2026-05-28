@@ -15,6 +15,7 @@ export default function NewSpotPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [locating, setLocating] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
 
   const [form, setForm] = useState({
     sportId: '',
@@ -35,15 +36,21 @@ export default function NewSpotPage() {
   const [hostNickname, setHostNickname] = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
     if (!token) { router.push('/login'); return; }
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const user = JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || '{}');
     setHostNickname(user.nickname || '');
     fetch('/api/sports').then(r => r.json()).then(d => setSports(d.data || []));
     fetch('/api/tags').then(r => r.json()).then(d => setTags(d.data || []));
   }, []);
 
   const set = (key: string, value: string) => setForm(f => ({ ...f, [key]: value }));
+
+  // 빨간 테두리 클래스 헬퍼
+  const invalid = (cond: boolean) =>
+    showErrors && cond
+      ? '!border-red-400 !bg-red-50 focus:!ring-red-200 focus:!border-red-400'
+      : '';
 
   const useCurrentLocation = async () => {
     setLocating(true);
@@ -52,7 +59,6 @@ export default function NewSpotPage() {
         const { latitude: lat, longitude: lng } = pos.coords;
         set('latitude', String(lat));
         set('longitude', String(lng));
-        // 좌표 → 주소 변환 (역지오코딩)
         try {
           const res = await fetch(
             `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
@@ -60,7 +66,6 @@ export default function NewSpotPage() {
           );
           const data = await res.json();
           if (data?.display_name) {
-            // 한국 주소 형식으로 정리 (시/도 구/군 동/읍/면 까지만)
             const parts = data.address;
             const addr = [
               parts?.city || parts?.province || parts?.state,
@@ -70,7 +75,7 @@ export default function NewSpotPage() {
             ].filter(Boolean).join(' ');
             set('locationName', addr || data.display_name.split(',').slice(0, 3).join(',').trim());
           }
-        } catch { /* 주소 변환 실패 시 좌표만 설정 */ }
+        } catch { /* 역지오코딩 실패 시 좌표만 유지 */ }
         setLocating(false);
       },
       () => {
@@ -82,7 +87,6 @@ export default function NewSpotPage() {
 
   const handleAddressSelect = async (result: { address: string; sido: string; sigungu: string }) => {
     set('locationName', result.address);
-    // Nominatim으로 좌표 자동 조회
     try {
       const res = await fetch(
         `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(result.address)}&format=json&limit=1`,
@@ -93,14 +97,16 @@ export default function NewSpotPage() {
         set('latitude', data[0].lat);
         set('longitude', data[0].lon);
       }
-    } catch { /* 좌표 조회 실패 시 현재 위치 사용 안내 */ }
+    } catch { /* 좌표 조회 실패 */ }
   };
 
   const handleSubmit = async () => {
+    setShowErrors(true);
+
     if (!form.sportId) return setError('종목을 선택해주세요');
     if (!form.title.trim()) return setError('제목을 입력해주세요');
     if (!form.locationName.trim()) return setError('장소명을 입력해주세요');
-    if (!form.latitude || !form.longitude) return setError('현재 위치를 가져와주세요');
+    if (!form.latitude || !form.longitude) return setError('위치를 설정해주세요 (주소 검색 또는 현재 위치 버튼 사용)');
     if (!form.date || !form.time) return setError('날짜와 시간을 선택해주세요');
     if (form.minAge && form.maxAge && Number(form.minAge) > Number(form.maxAge)) {
       return setError('최소 나이가 최대 나이보다 클 수 없습니다');
@@ -109,7 +115,7 @@ export default function NewSpotPage() {
     setLoading(true);
     setError('');
     try {
-      const token = localStorage.getItem('access_token');
+      const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
       const res = await fetch('/api/spots', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -140,9 +146,10 @@ export default function NewSpotPage() {
     }
   };
 
+  const ageError = showErrors && form.minAge && form.maxAge && Number(form.minAge) > Number(form.maxAge);
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 헤더 */}
       <header className="bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
         <button onClick={() => router.back()} className="text-gray-500 text-lg">←</button>
         <h1 className="text-lg font-bold text-gray-900">스팟 생성</h1>
@@ -163,8 +170,13 @@ export default function NewSpotPage() {
         </div>
 
         {/* 종목 */}
-        <div className="card space-y-3">
-          <p className="text-sm font-bold text-gray-800">종목 <span className="text-red-400">*</span></p>
+        <div className={`card space-y-3 ${showErrors && !form.sportId ? 'ring-2 ring-red-400' : ''}`}>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-bold text-gray-800">종목 <span className="text-red-400">*</span></p>
+            {showErrors && !form.sportId && (
+              <span className="text-xs text-red-500 font-medium">종목을 선택해주세요</span>
+            )}
+          </div>
           <div className="grid grid-cols-3 gap-2">
             {sports.map(s => (
               <button
@@ -190,12 +202,15 @@ export default function NewSpotPage() {
               제목 <span className="text-red-400">*</span>
             </label>
             <input
-              className="input w-full"
+              className={`input w-full ${invalid(!form.title.trim())}`}
               placeholder="예: 강남 풋살 같이해요"
               value={form.title}
               onChange={e => set('title', e.target.value)}
               maxLength={50}
             />
+            {showErrors && !form.title.trim() && (
+              <p className="text-xs text-red-500 mt-1">제목을 입력해주세요</p>
+            )}
           </div>
           <div>
             <label className="text-xs font-medium text-gray-500 mb-1 block">설명 (선택)</label>
@@ -252,13 +267,18 @@ export default function NewSpotPage() {
         </div>
 
         {/* 날짜 & 시간 */}
-        <div className="card space-y-3">
-          <p className="text-sm font-bold text-gray-800">날짜 & 시간 <span className="text-red-400">*</span></p>
+        <div className={`card space-y-3 ${showErrors && (!form.date || !form.time) ? 'ring-2 ring-red-400' : ''}`}>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-bold text-gray-800">날짜 & 시간 <span className="text-red-400">*</span></p>
+            {showErrors && (!form.date || !form.time) && (
+              <span className="text-xs text-red-500 font-medium">날짜와 시간을 선택해주세요</span>
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium text-gray-500 mb-1 block">날짜</label>
               <input
-                className="input w-full"
+                className={`input w-full ${invalid(!form.date)}`}
                 type="date"
                 value={form.date}
                 min={new Date().toISOString().split('T')[0]}
@@ -268,7 +288,7 @@ export default function NewSpotPage() {
             <div>
               <label className="text-xs font-medium text-gray-500 mb-1 block">시간</label>
               <input
-                className="input w-full"
+                className={`input w-full ${invalid(!form.time)}`}
                 type="time"
                 value={form.time}
                 onChange={e => set('time', e.target.value)}
@@ -278,10 +298,17 @@ export default function NewSpotPage() {
         </div>
 
         {/* 장소 */}
-        <div className="card space-y-3">
-          <p className="text-sm font-bold text-gray-800">장소 <span className="text-red-400">*</span></p>
+        <div className={`card space-y-3 ${showErrors && (!form.locationName.trim() || !form.latitude) ? 'ring-2 ring-red-400' : ''}`}>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-bold text-gray-800">장소 <span className="text-red-400">*</span></p>
+            {showErrors && !form.locationName.trim() && (
+              <span className="text-xs text-red-500 font-medium">장소를 입력해주세요</span>
+            )}
+            {showErrors && form.locationName.trim() && !form.latitude && (
+              <span className="text-xs text-red-500 font-medium">좌표 설정 필요</span>
+            )}
+          </div>
 
-          {/* 주소 검색 버튼 + 현재위치 버튼 */}
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -307,20 +334,18 @@ export default function NewSpotPage() {
             </button>
           </div>
 
-          {/* 주소 직접 수정 가능한 입력창 */}
           <div>
             <label className="text-xs font-medium text-gray-500 mb-1 block">
               장소 주소 <span className="text-red-400">*</span>
             </label>
             <input
-              className="input w-full"
+              className={`input w-full ${invalid(!form.locationName.trim())}`}
               placeholder="주소 검색 또는 현재 위치 버튼 사용"
               value={form.locationName}
               onChange={e => set('locationName', e.target.value)}
             />
           </div>
 
-          {/* 상세주소 */}
           <div>
             <label className="text-xs font-medium text-gray-500 mb-1 block">상세 장소명 (선택)</label>
             <input
@@ -331,15 +356,19 @@ export default function NewSpotPage() {
             />
           </div>
 
-          {form.latitude && form.longitude && (
+          {form.latitude && form.longitude ? (
             <p className="text-xs text-emerald-600 font-medium">
               ✓ 위치 설정됨 ({parseFloat(form.latitude).toFixed(4)}, {parseFloat(form.longitude).toFixed(4)})
             </p>
-          )}
+          ) : showErrors && form.locationName.trim() ? (
+            <p className="text-xs text-red-500 font-medium">
+              ⚠ 좌표가 없습니다. 주소 검색 또는 현재 위치 버튼을 눌러주세요
+            </p>
+          ) : null}
         </div>
 
         {/* 나이 제한 */}
-        <div className="card space-y-3">
+        <div className={`card space-y-3 ${ageError ? 'ring-2 ring-red-400' : ''}`}>
           <div className="flex items-center justify-between">
             <p className="text-sm font-bold text-gray-800">나이 제한</p>
             <span className="text-xs text-gray-400">선택사항</span>
@@ -349,7 +378,7 @@ export default function NewSpotPage() {
               <label className="text-xs font-medium text-gray-500 mb-1 block">최소 나이</label>
               <div className="relative">
                 <input
-                  className="input w-full pr-8"
+                  className={`input w-full pr-8 ${ageError ? '!border-red-400 !bg-red-50' : ''}`}
                   type="number"
                   placeholder="제한 없음"
                   value={form.minAge}
@@ -364,7 +393,7 @@ export default function NewSpotPage() {
               <label className="text-xs font-medium text-gray-500 mb-1 block">최대 나이</label>
               <div className="relative">
                 <input
-                  className="input w-full pr-8"
+                  className={`input w-full pr-8 ${ageError ? '!border-red-400 !bg-red-50' : ''}`}
                   type="number"
                   placeholder="제한 없음"
                   value={form.maxAge}
@@ -376,7 +405,9 @@ export default function NewSpotPage() {
               </div>
             </div>
           </div>
-          {(form.minAge || form.maxAge) && (
+          {ageError ? (
+            <p className="text-xs text-red-500 font-medium">최소 나이가 최대 나이보다 클 수 없습니다</p>
+          ) : (form.minAge || form.maxAge) ? (
             <p className="text-xs text-indigo-600">
               {form.minAge && form.maxAge
                 ? `${form.minAge}세 ~ ${form.maxAge}세만 참여 가능`
@@ -384,7 +415,7 @@ export default function NewSpotPage() {
                 ? `${form.minAge}세 이상만 참여 가능`
                 : `${form.maxAge}세 이하만 참여 가능`}
             </p>
-          )}
+          ) : null}
         </div>
 
         {/* 태그 */}
@@ -421,7 +452,7 @@ export default function NewSpotPage() {
 
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-            <p className="text-red-600 text-sm">{error}</p>
+            <p className="text-red-600 text-sm font-medium">⚠ {error}</p>
           </div>
         )}
       </div>
