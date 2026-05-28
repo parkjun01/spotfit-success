@@ -81,7 +81,7 @@ export default function NotificationsPage() {
   const toggleAll = () => {
     const next = Object.fromEntries(
       Object.keys(settings).map(k => [k, !allOn])
-    ) as NotifSettings;
+    ) as unknown as NotifSettings;
     setSettings(next);
     localStorage.setItem('notif_settings', JSON.stringify(next));
     setSaved(true);
