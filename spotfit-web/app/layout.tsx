@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: 'SpotFit — 운동 파티 매칭',
   description: '위치 기반 1회성 운동 파티 매칭 플랫폼',
   manifest: '/manifest.json',
-  themeColor: '#4F46E5',
+  themeColor: '#F97316',
   viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
 };
 
