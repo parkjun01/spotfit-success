@@ -1,8 +1,5 @@
 'use client';
-import { useEffect } from 'react';
-import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import { useEffect, useRef } from 'react';
 
 interface Props {
   start: { lat: number; lng: number };
@@ -12,31 +9,67 @@ interface Props {
   duration: number;
 }
 
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-});
-
-function FitBounds({ coords }: { coords: [number, number][] }) {
-  const map = useMap();
-  useEffect(() => {
-    if (coords.length > 0) map.fitBounds(coords, { padding: [50, 50] });
-  }, [coords, map]);
-  return null;
+function dotSvgUrl(color: string) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20">
+    <circle cx="10" cy="10" r="8" fill="${color}" stroke="white" stroke-width="3"/>
+  </svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
-const dotIcon = (color: string) => L.divIcon({
-  className: '',
-  html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3)"></div>`,
-  iconSize: [14, 14],
-  iconAnchor: [7, 7],
-});
-
 export default function RouteMap({ start, end, routeCoords, distance, duration }: Props) {
+  const mapRef = useRef<HTMLDivElement>(null);
   const distKm = distance < 1000 ? `${Math.round(distance)}m` : `${(distance / 1000).toFixed(1)}km`;
   const minutes = Math.round(duration / 60);
+
+  useEffect(() => {
+    const init = () => {
+      if (!mapRef.current) return;
+      const kakao = (window as any).kakao;
+
+      const map = new kakao.maps.Map(mapRef.current, {
+        center: new kakao.maps.LatLng(start.lat, start.lng),
+        level: 5,
+      });
+
+      if (routeCoords.length > 0) {
+        const path = routeCoords.map(([lat, lng]) => new kakao.maps.LatLng(lat, lng));
+        new kakao.maps.Polyline({
+          map,
+          path,
+          strokeWeight: 5,
+          strokeColor: '#F97316',
+          strokeOpacity: 0.85,
+          strokeStyle: 'solid',
+        });
+        const bounds = new kakao.maps.LatLngBounds();
+        path.forEach(p => bounds.extend(p));
+        map.setBounds(bounds);
+      }
+
+      new kakao.maps.Marker({
+        map,
+        position: new kakao.maps.LatLng(start.lat, start.lng),
+        image: new kakao.maps.MarkerImage(
+          dotSvgUrl('#3B82F6'), new kakao.maps.Size(20, 20),
+          { offset: new kakao.maps.Point(10, 10) }
+        ),
+      });
+      new kakao.maps.Marker({
+        map,
+        position: new kakao.maps.LatLng(end.lat, end.lng),
+        image: new kakao.maps.MarkerImage(
+          dotSvgUrl('#F97316'), new kakao.maps.Size(20, 20),
+          { offset: new kakao.maps.Point(10, 10) }
+        ),
+      });
+    };
+
+    if ((window as any).kakao?.maps) { init(); return; }
+    const t = setInterval(() => {
+      if ((window as any).kakao?.maps) { clearInterval(t); init(); }
+    }, 150);
+    return () => clearInterval(t);
+  }, [start, end, routeCoords]);
 
   return (
     <div>
@@ -50,29 +83,7 @@ export default function RouteMap({ start, end, routeCoords, distance, duration }
           <p className="text-xs text-gray-400 mt-0.5">도보 예상</p>
         </div>
       </div>
-
-      <MapContainer
-        center={[start.lat, start.lng]}
-        zoom={14}
-        style={{ height: '260px', borderRadius: '12px' }}
-        zoomControl={false}
-        attributionControl={false}
-      >
-        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        {routeCoords.length > 0 && (
-          <>
-            <Polyline positions={routeCoords} color="#F97316" weight={5} opacity={0.85} />
-            <FitBounds coords={routeCoords} />
-          </>
-        )}
-        <Marker position={[start.lat, start.lng]} icon={dotIcon('#3B82F6')}>
-          <Popup>내 위치</Popup>
-        </Marker>
-        <Marker position={[end.lat, end.lng]} icon={dotIcon('#F97316')}>
-          <Popup>{end.name}</Popup>
-        </Marker>
-      </MapContainer>
-
+      <div ref={mapRef} style={{ height: '260px', borderRadius: '12px' }} />
       <div className="flex items-center gap-3 mt-2 px-1">
         <span className="flex items-center gap-1.5 text-xs text-gray-500">
           <span className="inline-block w-3 h-3 rounded-full bg-blue-500" />내 위치
