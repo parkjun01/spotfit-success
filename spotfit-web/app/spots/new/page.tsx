@@ -137,6 +137,7 @@ export default function NewSpotPage() {
         }),
       });
       const data = await res.json();
+      if (res.status === 401) { router.push('/login'); return; }
       if (!res.ok) return setError(data.message || '오류가 발생했습니다');
       router.push(`/spots/${data.data.spotId}`);
     } catch {
