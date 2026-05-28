@@ -203,6 +203,10 @@ export default function SpotChatPage() {
     try { return format(new Date(dateStr), 'HH:mm'); } catch { return ''; }
   };
 
+  // 유저별 고정 색상 (닉네임 기반)
+  const AVATAR_COLORS = ['#8B5CF6','#3B82F6','#10B981','#F59E0B','#EF4444','#EC4899','#0D9488','#6366F1'];
+  const avatarColor = (uid: string) => AVATAR_COLORS[uid.charCodeAt(0) % AVATAR_COLORS.length];
+
   if (pageError) {
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-4 p-8">
@@ -280,32 +284,63 @@ export default function SpotChatPage() {
             <p className="text-sm text-gray-400">아직 메시지가 없습니다.<br />첫 번째로 인사해보세요!</p>
           </div>
         )}
-        {messages.map(msg => {
+        {messages.map((msg, idx) => {
           if (msg.message_type === 'status' || msg.message_type === 'notice') {
             return (
-              <div key={msg.id} className="flex justify-center my-1">
-                <span className="bg-amber-50 border border-amber-100 text-amber-700 text-xs px-3 py-1 rounded-full">
+              <div key={msg.id} className="flex justify-center my-2">
+                <span className="bg-black/10 text-gray-600 text-xs px-3 py-1 rounded-full">
                   {msg.message}
                 </span>
               </div>
             );
           }
+
           const mine = isMe(msg);
+          const prev = messages[idx - 1];
+          // 같은 사람이 연속으로 보낸 메시지면 아바타/이름 숨김
+          const showHeader = !mine && (
+            !prev || prev.message_type === 'status' || prev.message_type === 'notice' || prev.user_id !== msg.user_id
+          );
+          const color = avatarColor(msg.user_id);
+
           return (
-            <div key={msg.id} className={`flex items-end gap-2 ${mine ? 'flex-row-reverse' : ''}`}>
+            <div key={msg.id} className={`flex gap-2 ${mine ? 'flex-row-reverse' : 'flex-row'} ${showHeader ? 'mt-3' : 'mt-0.5'}`}>
+              {/* 아바타 — 상대방만, 첫 메시지만 표시 */}
               {!mine && (
-                <div className="w-8 h-8 rounded-full bg-violet-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                  {msg.users?.nickname?.[0] || '?'}
+                <div className="w-9 flex-shrink-0 flex flex-col justify-end">
+                  {showHeader && (
+                    <div
+                      className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-extrabold shadow-sm"
+                      style={{ background: color }}
+                    >
+                      {msg.users?.nickname?.[0] || '?'}
+                    </div>
+                  )}
                 </div>
               )}
-              <div className={`max-w-[72%] flex flex-col gap-0.5 ${mine ? 'items-end' : 'items-start'}`}>
-                {!mine && <span className="text-xs text-gray-400 px-1">{msg.users?.nickname}</span>}
-                <div className={`px-3 py-2 rounded-2xl text-sm leading-relaxed break-words ${
-                  mine ? 'bg-primary text-white rounded-br-sm' : 'bg-white text-gray-900 shadow-sm rounded-bl-sm'
-                }`}>
-                  {msg.message}
+
+              <div className={`max-w-[68%] flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
+                {/* 이름 — 상대방 첫 메시지만 */}
+                {showHeader && (
+                  <span className="text-xs font-bold mb-1 px-1" style={{ color }}>
+                    {msg.users?.nickname || '알 수 없음'}
+                  </span>
+                )}
+                <div className="flex items-end gap-1.5">
+                  {mine && (
+                    <span className="text-xs text-gray-300 mb-0.5 flex-shrink-0">{safeFormat(msg.created_at)}</span>
+                  )}
+                  <div className={`px-3.5 py-2.5 text-sm leading-relaxed break-words ${
+                    mine
+                      ? 'bg-primary text-white rounded-2xl rounded-tr-sm'
+                      : 'bg-white text-gray-900 shadow-sm rounded-2xl rounded-tl-sm'
+                  }`}>
+                    {msg.message}
+                  </div>
+                  {!mine && (
+                    <span className="text-xs text-gray-300 mb-0.5 flex-shrink-0">{safeFormat(msg.created_at)}</span>
+                  )}
                 </div>
-                <span className="text-xs text-gray-300 px-1">{safeFormat(msg.created_at)}</span>
               </div>
             </div>
           );
