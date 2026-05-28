@@ -30,16 +30,7 @@ export default function HomePage() {
   const [sports, setSports] = useState<{ id: string; name: string }[]>([]);
   const [selectedSport, setSelectedSport] = useState('');
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
-  const [userLocation, setUserLocation] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('user') || sessionStorage.getItem('user');
-      if (stored) {
-        const u = JSON.parse(stored);
-        if (u.homeLat && u.homeLng) return { lat: u.homeLat, lng: u.homeLng };
-      }
-    }
-    return { lat: 37.5665, lng: 126.978 };
-  });
+  const [userLocation, setUserLocation] = useState({ lat: 37.5665, lng: 126.978 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -47,6 +38,14 @@ export default function HomePage() {
       router.push('/login');
       return;
     }
+    // 저장된 홈 위치 적용 (hydration 이후 실행)
+    try {
+      const stored = localStorage.getItem('user') || sessionStorage.getItem('user');
+      if (stored) {
+        const u = JSON.parse(stored);
+        if (u.homeLat && u.homeLng) setUserLocation({ lat: u.homeLat, lng: u.homeLng });
+      }
+    } catch {}
     fetch('/api/sports').then(r => r.json()).then(d => setSports(d.data || []));
     navigator.geolocation?.getCurrentPosition(
       pos => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
