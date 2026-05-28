@@ -58,42 +58,38 @@ export async function POST(req: NextRequest) {
       return error('필수 항목이 누락되었습니다');
     }
 
-    const insertData: Record<string, any> = {
-      host_id: user.id, sport_id: sportId, title,
-      description: description || null,
-      location_name: locationName, latitude, longitude,
-      max_participants: maxParticipants,
-      difficulty_level: difficultyLevel || 'beginner',
-      starts_at: startsAt, current_participants: 1,
-      status: 'recruiting',
-    };
-    if (minAge !== null) insertData.min_age = minAge;
-    if (maxAge !== null) insertData.max_age = maxAge;
-
-    let { data: spot, error: insertErr } = await supabaseAdmin
+    // 1단계: 기본 필드만으로 스팟 생성 (나이제한 제외)
+    const { data: spot, error: insertErr } = await supabaseAdmin
       .from('spots')
-      .insert(insertData)
+      .insert({
+        host_id: user.id, sport_id: sportId, title,
+        description: description || null,
+        location_name: locationName, latitude, longitude,
+        max_participants: maxParticipants,
+        difficulty_level: difficultyLevel || 'beginner',
+        starts_at: startsAt, current_participants: 1,
+        status: 'recruiting',
+      })
       .select()
       .single();
-
-    // min_age/max_age 컬럼이 아직 없는 경우 제외하고 재시도
-    if (insertErr?.message?.includes('min_age') || insertErr?.message?.includes('max_age')) {
-      delete insertData.min_age;
-      delete insertData.max_age;
-      const retry = await supabaseAdmin.from('spots').insert(insertData).select().single();
-      spot = retry.data;
-      insertErr = retry.error;
-    }
-
     if (insertErr) throw insertErr;
 
-    // 호스트 자동 참여
+    // 2단계: 나이제한 update (컬럼이 없어도 스팟 생성은 성공)
+    if (minAge !== null || maxAge !== null) {
+      const ageData: Record<string, number> = {};
+      if (minAge !== null) ageData.min_age = minAge;
+      if (maxAge !== null) ageData.max_age = maxAge;
+      await supabaseAdmin.from('spots').update(ageData).eq('id', spot.id);
+      // 컬럼 없으면 조용히 무시
+    }
+
+    // 3단계: 호스트 자동 참여
     const { error: partErr } = await supabaseAdmin
       .from('participations')
-      .insert({ spot_id: spot.id, user_id: user.id, status: 'joined' });
+      .insert({ spot_id: spot.id, user_id: user.id });
     if (partErr) throw partErr;
 
-    // 태그 연결
+    // 4단계: 태그 연결
     if (tagIds.length) {
       await supabaseAdmin.from('spot_tags').insert(
         tagIds.map((tagId: string) => ({ spot_id: spot.id, tag_id: tagId }))
