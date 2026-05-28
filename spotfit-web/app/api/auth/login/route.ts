@@ -1,52 +1,33 @@
 import { NextRequest } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { signTokens } from '@/lib/auth';
-import { hash } from '@/lib/crypto';
 import { ok, error, handleError } from '@/lib/response';
+import bcrypt from 'bcryptjs';
 
 export async function POST(req: NextRequest) {
   try {
-    const { phone, nickname, preferredSports = [], activityRegion } = await req.json();
-    if (!phone) return error('전화번호를 입력해주세요');
+    const { username, password } = await req.json();
+    if (!username?.trim()) return error('아이디를 입력해주세요');
+    if (!password) return error('비밀번호를 입력해주세요');
 
-    const phoneHash = hash(phone);
-
-    const { data: existingUser } = await supabaseAdmin
+    const { data: user } = await supabaseAdmin
       .from('users')
       .select('*')
-      .eq('phone_hash', phoneHash)
+      .eq('username', username.trim())
       .eq('is_active', true)
       .single();
 
-    let user = existingUser;
+    if (!user) return error('아이디 또는 비밀번호가 올바르지 않습니다', 401);
 
-    if (!user) {
-      if (!nickname) return ok({ isNewUser: true });
-
-      const { data: nicknameCheck } = await supabaseAdmin
-        .from('users').select('id').eq('nickname', nickname).single();
-      if (nicknameCheck) return error('이미 사용 중인 닉네임입니다', 409);
-
-      const { data: newUser, error: insertErr } = await supabaseAdmin
-        .from('users')
-        .insert({ phone_hash: phoneHash, nickname, activity_region: activityRegion })
-        .select()
-        .single();
-      if (insertErr) throw insertErr;
-      user = newUser;
-
-      if (preferredSports.length) {
-        await supabaseAdmin.from('user_sports').insert(
-          preferredSports.map((sportId: string) => ({ user_id: user.id, sport_id: sportId }))
-        );
-      }
-    }
+    const isValid = await bcrypt.compare(password, user.password_hash);
+    if (!isValid) return error('아이디 또는 비밀번호가 올바르지 않습니다', 401);
 
     const tokens = signTokens(user.id);
     return ok({
-      isNewUser: false,
       user: {
-        id: user.id, nickname: user.nickname,
+        id: user.id,
+        nickname: user.nickname,
+        username: user.username,
         profileImage: user.profile_image,
         mannerScore: user.manner_score,
         subscriptionStatus: user.subscription_status,
