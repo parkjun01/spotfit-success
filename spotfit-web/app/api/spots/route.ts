@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
     // 3단계: 호스트 자동 참여 (실패해도 스팟 생성은 성공 처리)
     const { error: partErr } = await supabaseAdmin
       .from('participations')
-      .insert({ spot_id: spot.id, user_id: user.id });
+      .insert({ spot_id: spot.id, user_id: user.id, status: 'joined' });
     if (partErr) console.error('[spot] participation insert failed:', partErr.message);
 
     // 4단계: 태그 연결

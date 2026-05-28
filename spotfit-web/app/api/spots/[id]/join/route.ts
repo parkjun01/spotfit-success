@@ -19,7 +19,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       .from('participations').select('id').eq('spot_id', params.id).eq('user_id', user.id).single();
     if (existing) return error('이미 참여 중인 스팟입니다');
 
-    await supabaseAdmin.from('participations').insert({ spot_id: params.id, user_id: user.id });
+    await supabaseAdmin.from('participations').insert({ spot_id: params.id, user_id: user.id, status: 'joined' });
 
     const newCount = spot.current_participants + 1;
     const newStatus = newCount >= spot.max_participants ? 'full' : 'recruiting';
