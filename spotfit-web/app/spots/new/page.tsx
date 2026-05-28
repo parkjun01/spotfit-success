@@ -89,31 +89,18 @@ export default function NewSpotPage() {
     set('locationName', result.address);
     set('latitude', '');
     set('longitude', '');
-
-    // 번지/호 제거한 짧은 주소 (예: "가덕시동길 10" → "가덕시동길")
-    const shortAddr = result.address.replace(/\s+\d+(-\d+)?$/, '').trim();
-    const queries = [
-      result.address,                      // 전체 도로명 주소
-      shortAddr,                           // 번지 제거
-      `${result.sido} ${result.sigungu}`,  // 시도+시군구
-    ];
-
-    for (const q of queries) {
-      try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&countrycodes=kr&format=json&limit=1`,
-          { headers: { 'Accept-Language': 'ko' } }
-        );
-        const data = await res.json();
-        if (data[0]) {
-          set('latitude', data[0].lat);
-          set('longitude', data[0].lon);
-          return;
-        }
-      } catch {}
+    try {
+      const res = await fetch(`/api/geocode?address=${encodeURIComponent(result.address)}`);
+      const data = await res.json();
+      if (data.success) {
+        set('latitude', String(data.data.lat));
+        set('longitude', String(data.data.lng));
+      } else {
+        setError('주소 좌표를 찾지 못했습니다. 현재 위치 버튼을 대신 사용해주세요.');
+      }
+    } catch {
+      setError('좌표 변환 중 오류가 발생했습니다.');
     }
-
-    setError('주소 좌표를 자동으로 찾지 못했습니다. 현재 위치 버튼을 대신 사용해주세요.');
   };
 
   const handleSubmit = async () => {
