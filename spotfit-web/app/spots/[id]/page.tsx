@@ -71,6 +71,37 @@ export default function SpotDetailPage() {
     } finally { setLeaving(false); }
   };
 
+  const openExternalMap = (type: 'kakao' | 'naver' | 'google') => {
+    const openWithLocation = (sLat: number, sLng: number) => {
+      const dLat = spot.latitude;
+      const dLng = spot.longitude;
+      const dName = encodeURIComponent(spot.location_name);
+      const urls: Record<string, string> = {
+        kakao: `https://map.kakao.com/link/from/내위치,${sLat},${sLng}/to/${spot.location_name},${dLat},${dLng}`,
+        naver: `https://map.naver.com/index.nhn?slng=${sLng}&slat=${sLat}&stext=현재위치&elng=${dLng}&elat=${dLat}&etext=${dName}&menu=route&pathType=0`,
+        google: `https://www.google.com/maps/dir/?api=1&origin=${sLat},${sLng}&destination=${dLat},${dLng}&travelmode=walking`,
+      };
+      window.open(urls[type], '_blank');
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      pos => openWithLocation(pos.coords.latitude, pos.coords.longitude),
+      () => {
+        // 위치 권한 거부 시 목적지만으로 열기
+        const dLat = spot.latitude;
+        const dLng = spot.longitude;
+        const dName = encodeURIComponent(spot.location_name);
+        const fallbacks: Record<string, string> = {
+          kakao: `https://map.kakao.com/link/to/${spot.location_name},${dLat},${dLng}`,
+          naver: `https://map.naver.com/index.nhn?elng=${dLng}&elat=${dLat}&etext=${dName}&menu=route`,
+          google: `https://www.google.com/maps/dir/?api=1&destination=${dLat},${dLng}&travelmode=walking`,
+        };
+        window.open(fallbacks[type], '_blank');
+      },
+      { timeout: 5000 }
+    );
+  };
+
   const handleShowRoute = () => {
     if (routeData) { setShowRoute(v => !v); return; }
     setRouteLoading(true);
@@ -296,22 +327,19 @@ export default function SpotDetailPage() {
 
             {/* 외부 앱 연결 */}
             <div className="flex gap-2">
-              <a
-                href={`https://map.kakao.com/link/to/${encodeURIComponent(spot.location_name)},${spot.latitude},${spot.longitude}`}
-                target="_blank" rel="noopener noreferrer"
-                className="flex-1 flex items-center justify-center py-2 rounded-xl bg-yellow-400 text-yellow-900 text-xs font-bold hover:bg-yellow-500 transition-colors"
-              >카카오맵</a>
-              <a
-                href={`https://map.naver.com/index.nhn?elng=${spot.longitude}&elat=${spot.latitude}&etext=${encodeURIComponent(spot.location_name)}&menu=route`}
-                target="_blank" rel="noopener noreferrer"
-                className="flex-1 flex items-center justify-center py-2 rounded-xl bg-emerald-500 text-white text-xs font-bold hover:bg-emerald-600 transition-colors"
-              >네이버지도</a>
-              <a
-                href={`https://www.google.com/maps/dir/?api=1&destination=${spot.latitude},${spot.longitude}&travelmode=walking`}
-                target="_blank" rel="noopener noreferrer"
-                className="flex-1 flex items-center justify-center py-2 rounded-xl bg-blue-500 text-white text-xs font-bold hover:bg-blue-600 transition-colors"
-              >구글지도</a>
-            </div>
+              {([
+                { type: 'kakao', label: '카카오맵', cls: 'bg-yellow-400 text-yellow-900 hover:bg-yellow-500' },
+                { type: 'naver', label: '네이버지도', cls: 'bg-emerald-500 text-white hover:bg-emerald-600' },
+                { type: 'google', label: '구글지도', cls: 'bg-blue-500 text-white hover:bg-blue-600' },
+              ] as const).map(({ type, label, cls }) => (
+                <button
+                  key={type}
+                  onClick={() => openExternalMap(type)}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${cls}`}
+                >
+                  {label}
+                </button>
+              ))}</div>
           </div>
         )}
 
