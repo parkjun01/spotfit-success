@@ -1,16 +1,16 @@
 'use client';
 
 declare global {
-  interface Window {
-    daum: any;
-  }
+  interface Window { daum: any; }
 }
 
-interface AddressResult {
-  address: string;      // 도로명 주소
-  zonecode: string;     // 우편번호
-  sido: string;         // 시/도
-  sigungu: string;      // 시/군/구
+export interface AddressResult {
+  address: string;
+  zonecode: string;
+  sido: string;
+  sigungu: string;
+  lat?: number;
+  lng?: number;
 }
 
 interface Props {
@@ -21,6 +21,18 @@ interface Props {
   required?: boolean;
 }
 
+async function geocode(address: string): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`,
+      { headers: { 'Accept-Language': 'ko' } }
+    );
+    const data = await res.json();
+    if (data[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+  } catch {}
+  return null;
+}
+
 export default function AddressSearch({ value, onChange, placeholder = '주소 검색', label, required }: Props) {
   const openSearch = () => {
     if (!window.daum?.Postcode) {
@@ -28,13 +40,16 @@ export default function AddressSearch({ value, onChange, placeholder = '주소 �
       return;
     }
     new window.daum.Postcode({
-      oncomplete: (data: any) => {
+      oncomplete: async (data: any) => {
         const address = data.roadAddress || data.jibunAddress;
+        const coords = await geocode(address);
         onChange({
           address,
           zonecode: data.zonecode,
           sido: data.sido,
           sigungu: data.sigungu,
+          lat: coords?.lat,
+          lng: coords?.lng,
         });
       },
       theme: { bgColor: '#4F46E5', searchBgColor: '#4F46E5', queryTextColor: '#FFFFFF' },

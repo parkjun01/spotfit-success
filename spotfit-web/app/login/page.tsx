@@ -20,7 +20,8 @@ export default function LoginPage() {
   const [regForm, setRegForm] = useState({
     username: '', password: '', passwordConfirm: '',
     nickname: '', gender: '', age: '',
-    activityRegion: '', preferredSports: [] as string[],
+    activityRegion: '', homeLat: 0, homeLng: 0,
+    preferredSports: [] as string[],
   });
 
   useEffect(() => {
@@ -92,6 +93,8 @@ export default function LoginPage() {
           gender: regForm.gender,
           age: regForm.age ? parseInt(regForm.age) : null,
           activityRegion: regForm.activityRegion || null,
+          homeLat: regForm.homeLat || null,
+          homeLng: regForm.homeLng || null,
           preferredSports: regForm.preferredSports,
         }),
       });
@@ -313,7 +316,12 @@ export default function LoginPage() {
                     value={regForm.activityRegion}
                     placeholder="주소 검색으로 거주지 등록"
                     onChange={result =>
-                      setRegForm(f => ({ ...f, activityRegion: `${result.sido} ${result.sigungu}` }))
+                      setRegForm(f => ({
+                        ...f,
+                        activityRegion: `${result.sido} ${result.sigungu}`,
+                        homeLat: result.lat || 0,
+                        homeLng: result.lng || 0,
+                      }))
                     }
                   />
                 </div>

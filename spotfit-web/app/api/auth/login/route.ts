@@ -31,6 +31,8 @@ export async function POST(req: NextRequest) {
         profileImage: user.profile_image,
         mannerScore: user.manner_score,
         subscriptionStatus: user.subscription_status,
+        homeLat: user.home_lat,
+        homeLng: user.home_lng,
       },
       ...tokens,
     });

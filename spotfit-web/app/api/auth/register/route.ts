@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 
 export async function POST(req: NextRequest) {
   try {
-    const { username, password, nickname, activityRegion, gender, age, preferredSports = [] } = await req.json();
+    const { username, password, nickname, activityRegion, gender, age, preferredSports = [], homeLat, homeLng } = await req.json();
 
     if (!username?.trim()) return error('아이디를 입력해주세요');
     if (username.length < 4 || username.length > 20) return error('아이디는 4~20자여야 합니다');
@@ -35,6 +35,8 @@ export async function POST(req: NextRequest) {
         activity_region: activityRegion || null,
         gender: gender || null,
         age: age ? parseInt(age) : null,
+        home_lat: homeLat || null,
+        home_lng: homeLng || null,
       })
       .select()
       .single();
@@ -55,6 +57,8 @@ export async function POST(req: NextRequest) {
         profileImage: newUser.profile_image,
         mannerScore: newUser.manner_score,
         subscriptionStatus: newUser.subscription_status,
+        homeLat: newUser.home_lat,
+        homeLng: newUser.home_lng,
       },
       ...tokens,
     });
