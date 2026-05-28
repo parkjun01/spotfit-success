@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import AddressSearch from '@/components/AddressSearch';
 
@@ -23,6 +23,8 @@ export default function LoginPage() {
     activityRegion: '', addressDetail: '', homeLat: 0, homeLng: 0,
     preferredSports: [] as string[],
   });
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+  const usernameTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetch('/api/sports').then(r => r.json()).then(d => setSports(d.data || []));
@@ -61,12 +63,30 @@ export default function LoginPage() {
     finally { setLoading(false); }
   };
 
+  const checkUsername = (value: string) => {
+    if (usernameTimer.current) clearTimeout(usernameTimer.current);
+    if (!value || value.length < 4 || !/^[a-zA-Z0-9_]+$/.test(value)) {
+      setUsernameStatus('idle');
+      return;
+    }
+    setUsernameStatus('checking');
+    usernameTimer.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/auth/check-username/${encodeURIComponent(value)}`);
+        const data = await res.json();
+        setUsernameStatus(data.data?.available ? 'available' : 'taken');
+      } catch { setUsernameStatus('idle'); }
+    }, 500);
+  };
+
   const nextStep = () => {
     setError('');
     if (step === 1) {
       if (!regForm.username.trim()) return setError('아이디를 입력해주세요');
       if (regForm.username.length < 4 || regForm.username.length > 20) return setError('아이디는 4~20자여야 합니다');
       if (!/^[a-zA-Z0-9_]+$/.test(regForm.username)) return setError('영문, 숫자, 밑줄(_)만 사용 가능합니다');
+      if (usernameStatus === 'taken') return setError('이미 사용 중인 아이디입니다');
+      if (usernameStatus === 'checking') return setError('아이디 중복 확인 중입니다. 잠시 후 다시 시도해주세요');
       if (!regForm.password) return setError('비밀번호를 입력해주세요');
       if (regForm.password.length < 6) return setError('비밀번호는 6자 이상이어야 합니다');
       if (regForm.password !== regForm.passwordConfirm) return setError('비밀번호가 일치하지 않습니다');
@@ -224,14 +244,28 @@ export default function LoginPage() {
                     <label className="text-xs font-medium text-gray-600 mb-1 block">
                       아이디 <span className="text-red-400">*</span>
                     </label>
-                    <input
-                      className="input w-full"
-                      placeholder="영문·숫자·밑줄, 4~20자"
-                      value={regForm.username}
-                      onChange={e => setRegForm(f => ({ ...f, username: e.target.value }))}
-                      autoComplete="username"
-                      maxLength={20}
-                    />
+                    <div className="relative">
+                      <input
+                        className={`input w-full pr-24 ${
+                          usernameStatus === 'taken' ? '!border-red-400 !bg-red-50' :
+                          usernameStatus === 'available' ? '!border-emerald-400 !bg-emerald-50' : ''
+                        }`}
+                        placeholder="영문·숫자·밑줄, 4~20자"
+                        value={regForm.username}
+                        onChange={e => {
+                          setRegForm(f => ({ ...f, username: e.target.value }));
+                          checkUsername(e.target.value);
+                        }}
+                        autoComplete="username"
+                        maxLength={20}
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold">
+                        {usernameStatus === 'checking' && <span className="text-gray-400">확인 중...</span>}
+                        {usernameStatus === 'available' && <span className="text-emerald-500">✓ 사용 가능</span>}
+                        {usernameStatus === 'taken' && <span className="text-red-500">✗ 이미 사용 중</span>}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">영문, 숫자, 밑줄(_)만 사용 가능 · 4~20자</p>
                   </div>
                   <div>
                     <label className="text-xs font-medium text-gray-600 mb-1 block">
