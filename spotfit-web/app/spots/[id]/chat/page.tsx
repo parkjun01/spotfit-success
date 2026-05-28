@@ -192,7 +192,8 @@ export default function SpotChatPage() {
   const handleStatusChange = async (status: string) => {
     setMyStatus(status);
     const label = STATUS_OPTIONS.find(s => s.value === status)?.label || status;
-    await sendMessage('status', `${nickname}님 상태: ${label}`);
+    const displayName = nickname.endsWith('님') ? nickname : `${nickname}님`;
+    await sendMessage('status', `${displayName} 상태: ${label}`);
   };
 
   const isMe = (msg: Message) => msg.user_id === userId;
