@@ -2,8 +2,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+
+const RouteMap = dynamic(() => import('@/components/RouteMap'), { ssr: false });
 
 const DIFFICULTY: Record<string, string> = { beginner: '초급', intermediate: '중급', advanced: '고급' };
 const STATUS_MAP: Record<string, string> = { recruiting: '모집중', full: '마감', in_progress: '진행중', completed: '종료', cancelled: '취소' };
@@ -27,6 +30,14 @@ export default function SpotDetailPage() {
   const [cancelling, setCancelling] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [myUserId, setMyUserId] = useState<string | null>(null);
+  const [showRoute, setShowRoute] = useState(false);
+  const [routeLoading, setRouteLoading] = useState(false);
+  const [routeData, setRouteData] = useState<{
+    start: { lat: number; lng: number };
+    coords: [number, number][];
+    distance: number;
+    duration: number;
+  } | null>(null);
 
   useEffect(() => {
     const t = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
@@ -58,6 +69,32 @@ export default function SpotDetailPage() {
       alert('참여가 취소되었습니다');
       window.location.reload();
     } finally { setLeaving(false); }
+  };
+
+  const handleShowRoute = () => {
+    if (routeData) { setShowRoute(v => !v); return; }
+    setRouteLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude: sLat, longitude: sLng } = pos.coords;
+        try {
+          const res = await fetch(
+            `https://router.project-osrm.org/route/v1/walking/${sLng},${sLat};${spot.longitude},${spot.latitude}?overview=full&geometries=geojson`
+          );
+          const data = await res.json();
+          const route = data.routes?.[0];
+          if (route) {
+            const coords: [number, number][] = route.geometry.coordinates.map(
+              ([lng, lat]: [number, number]) => [lat, lng]
+            );
+            setRouteData({ start: { lat: sLat, lng: sLng }, coords, distance: route.distance, duration: route.duration });
+            setShowRoute(true);
+          }
+        } catch { alert('경로를 불러오지 못했습니다'); }
+        setRouteLoading(false);
+      },
+      () => { alert('위치 권한이 필요합니다'); setRouteLoading(false); }
+    );
   };
 
   const handleCancelSpot = async () => {
@@ -232,21 +269,47 @@ export default function SpotDetailPage() {
           <div className="card">
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">길 안내</p>
             <p className="text-xs text-gray-400 mb-3">{spot.location_name}</p>
+
+            {/* 앱 내 경로 보기 */}
+            <button
+              onClick={handleShowRoute}
+              disabled={routeLoading}
+              className="w-full py-3 mb-3 rounded-xl font-extrabold text-sm transition-all active:scale-95 flex items-center justify-center gap-2"
+              style={{ background: showRoute ? '#F3F4F6' : sportColor, color: showRoute ? '#6B7280' : 'white' }}
+            >
+              {routeLoading ? (
+                <><span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" />위치 확인 중...</>
+              ) : showRoute ? '경로 닫기 ✕' : '🗺️ 경로 보기'}
+            </button>
+
+            {showRoute && routeData && (
+              <div className="mb-3">
+                <RouteMap
+                  start={routeData.start}
+                  end={{ lat: spot.latitude, lng: spot.longitude, name: spot.location_name }}
+                  routeCoords={routeData.coords}
+                  distance={routeData.distance}
+                  duration={routeData.duration}
+                />
+              </div>
+            )}
+
+            {/* 외부 앱 연결 */}
             <div className="flex gap-2">
               <a
                 href={`https://map.kakao.com/link/to/${encodeURIComponent(spot.location_name)},${spot.latitude},${spot.longitude}`}
                 target="_blank" rel="noopener noreferrer"
-                className="flex-1 flex items-center justify-center py-2.5 rounded-xl bg-yellow-400 text-yellow-900 text-xs font-bold hover:bg-yellow-500 transition-colors"
+                className="flex-1 flex items-center justify-center py-2 rounded-xl bg-yellow-400 text-yellow-900 text-xs font-bold hover:bg-yellow-500 transition-colors"
               >카카오맵</a>
               <a
                 href={`https://map.naver.com/index.nhn?elng=${spot.longitude}&elat=${spot.latitude}&etext=${encodeURIComponent(spot.location_name)}&menu=route`}
                 target="_blank" rel="noopener noreferrer"
-                className="flex-1 flex items-center justify-center py-2.5 rounded-xl bg-emerald-500 text-white text-xs font-bold hover:bg-emerald-600 transition-colors"
+                className="flex-1 flex items-center justify-center py-2 rounded-xl bg-emerald-500 text-white text-xs font-bold hover:bg-emerald-600 transition-colors"
               >네이버지도</a>
               <a
                 href={`https://www.google.com/maps/dir/?api=1&destination=${spot.latitude},${spot.longitude}&travelmode=walking`}
                 target="_blank" rel="noopener noreferrer"
-                className="flex-1 flex items-center justify-center py-2.5 rounded-xl bg-blue-500 text-white text-xs font-bold hover:bg-blue-600 transition-colors"
+                className="flex-1 flex items-center justify-center py-2 rounded-xl bg-blue-500 text-white text-xs font-bold hover:bg-blue-600 transition-colors"
               >구글지도</a>
             </div>
           </div>
