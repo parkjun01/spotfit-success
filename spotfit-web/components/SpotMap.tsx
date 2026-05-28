@@ -223,12 +223,12 @@ export default function SpotMap({ spots, userLocation }: {
                     👥 {spot.current_participants}/{spot.max_participants}명
                     {spot.status === 'full' && <span style={{ color: '#EF4444', marginLeft: 4 }}>마감</span>}
                   </span>
-                  {spot.host_manner_score !== undefined && (
+                  {spot.host_manner_score != null && (
                     <span style={{
                       fontSize: 11, fontWeight: 700,
                       color: spot.host_manner_score >= 38 ? '#059669' : spot.host_manner_score >= 30 ? '#D97706' : '#EF4444',
                     }}>
-                      ★{spot.host_manner_score.toFixed(1)}
+                      ★{Number(spot.host_manner_score).toFixed(1)}
                     </span>
                   )}
                 </div>
