@@ -1,7 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import AddressSearch from '@/components/AddressSearch';
+
+declare global { interface Window { daum: any; } }
 
 interface Sport { id: string; name: string; }
 
@@ -274,31 +275,57 @@ export default function NewSpotPage() {
         {/* 장소 */}
         <div className="card space-y-3">
           <p className="text-sm font-bold text-gray-800">장소 <span className="text-red-400">*</span></p>
-          <AddressSearch
-            label="장소 주소"
-            required
-            value={form.locationName}
-            placeholder="주소 검색"
-            onChange={handleAddressSelect}
-          />
-          {form.locationName && (
-            <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">상세 장소명 (선택)</label>
-              <input
-                className="input w-full"
-                placeholder="예: 3층 풋살장, B동 입구 등"
-                value={form.locationDetail || ''}
-                onChange={e => set('locationDetail', e.target.value)}
-              />
-            </div>
-          )}
-          <button
-            onClick={useCurrentLocation}
-            disabled={locating}
-            className="w-full py-2.5 rounded-xl border border-gray-200 text-gray-500 text-sm font-medium hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
-          >
-            {locating ? '주소 변환 중...' : '📍 현재 위치 주소로 자동 입력'}
-          </button>
+
+          {/* 주소 검색 버튼 + 현재위치 버튼 */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.daum?.Postcode) {
+                  new window.daum.Postcode({
+                    oncomplete: (data: any) => handleAddressSelect({ address: data.roadAddress || data.jibunAddress, sido: data.sido, sigungu: data.sigungu }),
+                    theme: { bgColor: '#4F46E5', searchBgColor: '#4F46E5', queryTextColor: '#FFFFFF' },
+                  }).open();
+                }
+              }}
+              className="py-2.5 rounded-xl border-2 border-primary text-primary text-sm font-semibold hover:bg-indigo-50 transition-colors"
+            >
+              🔍 주소 검색
+            </button>
+            <button
+              type="button"
+              onClick={useCurrentLocation}
+              disabled={locating}
+              className="py-2.5 rounded-xl border-2 border-gray-200 text-gray-600 text-sm font-semibold hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
+            >
+              {locating ? '변환 중...' : '📍 현재 위치'}
+            </button>
+          </div>
+
+          {/* 주소 직접 수정 가능한 입력창 */}
+          <div>
+            <label className="text-xs font-medium text-gray-500 mb-1 block">
+              장소 주소 <span className="text-red-400">*</span>
+            </label>
+            <input
+              className="input w-full"
+              placeholder="주소 검색 또는 현재 위치 버튼 사용"
+              value={form.locationName}
+              onChange={e => set('locationName', e.target.value)}
+            />
+          </div>
+
+          {/* 상세주소 */}
+          <div>
+            <label className="text-xs font-medium text-gray-500 mb-1 block">상세 장소명 (선택)</label>
+            <input
+              className="input w-full"
+              placeholder="예: 3층 풋살장, B동 입구 등"
+              value={form.locationDetail}
+              onChange={e => set('locationDetail', e.target.value)}
+            />
+          </div>
+
           {form.latitude && form.longitude && (
             <p className="text-xs text-emerald-600 font-medium">
               ✓ 위치 설정됨 ({parseFloat(form.latitude).toFixed(4)}, {parseFloat(form.longitude).toFixed(4)})
