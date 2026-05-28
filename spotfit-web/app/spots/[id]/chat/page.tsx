@@ -127,15 +127,15 @@ export default function SpotChatPage() {
     };
   }, [id]);
 
-  // 폴백 폴링
+  // 폴링 (3초마다 — broadcast 미수신 메시지 보완)
   useEffect(() => {
     if (!token || loading) return;
-    const timer = setInterval(() => {
+    const poll = () => {
       const after = lastCreatedAt.current;
-      if (!after) return;
-      fetch(`/api/spots/${id}/messages?after=${encodeURIComponent(after)}&limit=20`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const url = after
+        ? `/api/spots/${id}/messages?after=${encodeURIComponent(after)}&limit=20`
+        : `/api/spots/${id}/messages?limit=20`;
+      fetch(url, { headers: { Authorization: `Bearer ${token}` } })
         .then(r => r.json())
         .then(d => {
           const fresh = (d.data || []).filter((m: Message) => !seenIds.current.has(m.id));
@@ -146,7 +146,8 @@ export default function SpotChatPage() {
           }
         })
         .catch(() => {});
-    }, 30_000);
+    };
+    const timer = setInterval(poll, 3_000);
     return () => clearInterval(timer);
   }, [id, token, loading]);
 
