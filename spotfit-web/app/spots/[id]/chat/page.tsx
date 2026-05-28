@@ -127,22 +127,22 @@ export default function SpotChatPage() {
     };
   }, [id]);
 
-  // 폴링 (3초마다 — broadcast 미수신 메시지 보완)
+  // 폴링 (3초마다 — 항상 최근 100개를 가져와 새 메시지만 추가)
   useEffect(() => {
     if (!token || loading) return;
     const poll = () => {
-      const after = lastCreatedAt.current;
-      const url = after
-        ? `/api/spots/${id}/messages?after=${encodeURIComponent(after)}&limit=20`
-        : `/api/spots/${id}/messages?limit=20`;
-      fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      fetch(`/api/spots/${id}/messages?limit=100`, { headers: { Authorization: `Bearer ${token}` } })
         .then(r => r.json())
         .then(d => {
-          const fresh = (d.data || []).filter((m: Message) => !seenIds.current.has(m.id));
+          const all: Message[] = d.data || [];
+          const fresh = all.filter(m => !seenIds.current.has(m.id));
           if (fresh.length) {
-            fresh.forEach((m: Message) => seenIds.current.add(m.id));
-            setMessages(prev => [...prev, ...fresh]);
-            lastCreatedAt.current = fresh[fresh.length - 1].created_at;
+            fresh.forEach(m => seenIds.current.add(m.id));
+            setMessages(prev => {
+              const merged = [...prev, ...fresh];
+              merged.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+              return merged;
+            });
           }
         })
         .catch(() => {});
@@ -196,7 +196,11 @@ export default function SpotChatPage() {
     await sendMessage('status', `${displayName} 상태: ${label}`);
   };
 
-  const isMe = (msg: Message) => msg.user_id === userId;
+  const isMe = (msg: Message) => {
+    if (userId) return msg.user_id === userId;
+    // userId 로드 전 fallback: 닉네임 비교
+    return msg.users?.nickname === nickname;
+  };
   const mannerColor = (s: number) =>
     s >= 38 ? 'text-emerald-600' : s >= 30 ? 'text-amber-500' : 'text-red-500';
 
