@@ -151,10 +151,14 @@ function Legend({ sports }: { sports: string[] }) {
   );
 }
 
+const DIFFICULTY: Record<string, string> = { beginner: '초급', intermediate: '중급', advanced: '고급' };
+
 interface Spot {
   id: string; title: string; sport_name: string; location_name: string;
   latitude: number; longitude: number; current_participants: number;
   max_participants: number; status: string;
+  starts_at?: string; host_nickname?: string; host_manner_score?: number;
+  difficulty_level?: string;
 }
 
 export default function SpotMap({ spots, userLocation }: {
@@ -197,26 +201,47 @@ export default function SpotMap({ spots, userLocation }: {
             icon={createSpotIcon(getSportColor(spot.sport_name), spot.sport_name, spot.status === 'full')}
           >
             <Popup>
-              <div style={{ minWidth: 160 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              <div style={{ minWidth: 190 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                   <div style={{
                     width: 10, height: 10, borderRadius: '50%',
                     background: getSportColor(spot.sport_name), flexShrink: 0,
                   }} />
                   <strong style={{ fontSize: 14 }}>{spot.title}</strong>
                 </div>
-                <p style={{ margin: '4px 0', fontSize: 12, color: '#666' }}>
-                  {spot.sport_name} · {spot.location_name}
+                <p style={{ margin: '2px 0', fontSize: 12, color: '#666' }}>
+                  🏃 {spot.sport_name}{spot.difficulty_level ? ` · ${DIFFICULTY[spot.difficulty_level] || spot.difficulty_level}` : ''}
                 </p>
-                <p style={{ margin: '4px 0', fontSize: 12 }}>
-                  👥 {spot.current_participants}/{spot.max_participants}명
-                  {spot.status === 'full' && <span style={{ color: '#EF4444', marginLeft: 4 }}>마감</span>}
-                </p>
+                {spot.starts_at && (
+                  <p style={{ margin: '2px 0', fontSize: 12, color: '#666' }}>
+                    🕐 {new Date(spot.starts_at).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })} {new Date(spot.starts_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                )}
+                <p style={{ margin: '2px 0', fontSize: 12, color: '#666' }}>📍 {spot.location_name}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '6px 0' }}>
+                  <span style={{ fontSize: 12 }}>
+                    👥 {spot.current_participants}/{spot.max_participants}명
+                    {spot.status === 'full' && <span style={{ color: '#EF4444', marginLeft: 4 }}>마감</span>}
+                  </span>
+                  {spot.host_manner_score !== undefined && (
+                    <span style={{
+                      fontSize: 11, fontWeight: 700,
+                      color: spot.host_manner_score >= 38 ? '#059669' : spot.host_manner_score >= 30 ? '#D97706' : '#EF4444',
+                    }}>
+                      ★{spot.host_manner_score.toFixed(1)}
+                    </span>
+                  )}
+                </div>
                 <a
                   href={`/spots/${spot.id}`}
-                  style={{ color: '#4F46E5', fontSize: 13, fontWeight: 'bold' }}
+                  style={{
+                    display: 'block', textAlign: 'center', marginTop: 6, padding: '7px 0',
+                    background: spot.status === 'full' ? '#94A3B8' : '#4F46E5',
+                    color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 'bold',
+                    textDecoration: 'none',
+                  }}
                 >
-                  상세보기 →
+                  {spot.status === 'full' ? '마감된 스팟' : '참여하기 →'}
                 </a>
               </div>
             </Popup>

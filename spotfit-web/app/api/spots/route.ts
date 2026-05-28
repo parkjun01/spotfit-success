@@ -58,16 +58,19 @@ export async function POST(req: NextRequest) {
       return error('필수 항목이 누락되었습니다');
     }
 
+    const insertData: Record<string, any> = {
+      host_id: user.id, sport_id: sportId, title, description,
+      location_name: locationName, latitude, longitude,
+      max_participants: maxParticipants,
+      difficulty_level: difficultyLevel || 'beginner',
+      starts_at: startsAt, current_participants: 1,
+    };
+    if (minAge !== null) insertData.min_age = minAge;
+    if (maxAge !== null) insertData.max_age = maxAge;
+
     const { data: spot, error: insertErr } = await supabaseAdmin
       .from('spots')
-      .insert({
-        host_id: user.id, sport_id: sportId, title, description,
-        location_name: locationName, latitude, longitude,
-        max_participants: maxParticipants,
-        difficulty_level: difficultyLevel || 'beginner',
-        starts_at: startsAt, current_participants: 1,
-        min_age: minAge, max_age: maxAge,
-      })
+      .insert(insertData)
       .select()
       .single();
     if (insertErr) throw insertErr;

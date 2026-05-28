@@ -7,17 +7,23 @@ export default function MyPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [pendingEvals, setPendingEvals] = useState(0);
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
     if (!token) { router.push('/login'); return; }
     fetch('/api/users/me', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json()).then(d => setUser(d.data)).finally(() => setLoading(false));
+    fetch('/api/evaluations?pending=true', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json()).then(d => setPendingEvals((d.data || []).length)).catch(() => {});
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
+    sessionStorage.removeItem('access_token');
+    sessionStorage.removeItem('user');
     router.push('/login');
   };
 
@@ -65,14 +71,18 @@ export default function MyPage() {
         <div className="card divide-y divide-gray-100">
           {[
             { label: '프로필 수정', href: '/mypage/edit' },
-            { label: '내 스팟 이력', href: '/mypage/spots' },
+            { label: '내 스팟 이력', href: '/mypage/spots', badge: pendingEvals > 0, badgeText: `평가 ${pendingEvals}건` },
             { label: '프리미엄 구독', href: '/mypage/premium', badge: user?.subscription_status !== 'premium' },
             { label: '알림 설정', href: '/mypage/notifications' },
           ].map(item => (
             <Link key={item.href} href={item.href} className="flex items-center justify-between py-3.5 hover:bg-gray-50">
               <span className="text-sm font-medium text-gray-700">{item.label}</span>
               <div className="flex items-center gap-2">
-                {item.badge && <span className="badge bg-red-500 text-white text-xs">NEW</span>}
+                {item.badge && (
+                  <span className="badge bg-red-500 text-white text-xs">
+                    {(item as any).badgeText || 'NEW'}
+                  </span>
+                )}
                 <span className="text-gray-300">›</span>
               </div>
             </Link>

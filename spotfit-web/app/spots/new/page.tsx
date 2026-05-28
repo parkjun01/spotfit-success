@@ -5,10 +5,13 @@ import { useRouter } from 'next/navigation';
 declare global { interface Window { daum: any; } }
 
 interface Sport { id: string; name: string; }
+interface Tag { id: string; name: string; classification: string; }
 
 export default function NewSpotPage() {
   const router = useRouter();
   const [sports, setSports] = useState<Sport[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [locating, setLocating] = useState(false);
@@ -37,6 +40,7 @@ export default function NewSpotPage() {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     setHostNickname(user.nickname || '');
     fetch('/api/sports').then(r => r.json()).then(d => setSports(d.data || []));
+    fetch('/api/tags').then(r => r.json()).then(d => setTags(d.data || []));
   }, []);
 
   const set = (key: string, value: string) => setForm(f => ({ ...f, [key]: value }));
@@ -123,6 +127,7 @@ export default function NewSpotPage() {
           startsAt: `${form.date}T${form.time}:00`,
           minAge: form.minAge ? parseInt(form.minAge) : null,
           maxAge: form.maxAge ? parseInt(form.maxAge) : null,
+          tagIds: selectedTagIds,
         }),
       });
       const data = await res.json();
@@ -381,6 +386,38 @@ export default function NewSpotPage() {
             </p>
           )}
         </div>
+
+        {/* 태그 */}
+        {tags.length > 0 && (
+          <div className="card space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-bold text-gray-800">태그</p>
+              <span className="text-xs text-gray-400">선택사항 · 최대 5개</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {tags.map(tag => (
+                <button
+                  key={tag.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedTagIds(prev =>
+                      prev.includes(tag.id)
+                        ? prev.filter(t => t !== tag.id)
+                        : prev.length < 5 ? [...prev, tag.id] : prev
+                    );
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                    selectedTagIds.includes(tag.id)
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-primary'
+                  }`}
+                >
+                  #{tag.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
