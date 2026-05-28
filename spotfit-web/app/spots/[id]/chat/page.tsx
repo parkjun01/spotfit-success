@@ -1,7 +1,6 @@
 'use client';
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
 
 interface Message {
@@ -15,95 +14,120 @@ interface Message {
 
 interface Participant {
   user_id: string;
+  status: string;
   users: { nickname: string; manner_score: number };
 }
 
 const STATUS_OPTIONS = [
-  { value: 'ready',       label: '🟡 준비 중' },
+  { value: 'ready', label: '🟡 준비 중' },
   { value: 'in_progress', label: '🟢 운동 중' },
-  { value: 'completed',   label: '✅ 완료' },
+  { value: 'completed', label: '✅ 완료' },
 ];
 
 export default function SpotChatPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
 
-  const [messages, setMessages]           = useState<Message[]>([]);
-  const [participants, setParticipants]   = useState<Participant[]>([]);
-  const [input, setInput]                 = useState('');
-  const [myStatus, setMyStatus]           = useState('ready');
-  const [userId, setUserId]               = useState<string | null>(null);
-  const [nickname, setNickname]           = useState('');
-  const [spotTitle, setSpotTitle]         = useState('');
-  const [token, setToken]                 = useState<string | null>(null);
-  const [sending, setSending]             = useState(false);
-  const [loading, setLoading]             = useState(true);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [input, setInput] = useState('');
+  const [myStatus, setMyStatus] = useState('ready');
+  const [userId, setUserId] = useState<string | null>(null);
+  const [nickname, setNickname] = useState('');
+  const [spotTitle, setSpotTitle] = useState('');
+  const [token, setToken] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [isParticipant, setIsParticipant] = useState(false);
-  const [connected, setConnected]         = useState(false);
+  const [connected, setConnected] = useState(false);
+  const [pageError, setPageError] = useState<string | null>(null);
 
-  const bottomRef      = useRef<HTMLDivElement>(null);
-  const channelRef     = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const seenIds        = useRef(new Set<string>());   // 중복 방지
-  const lastCreatedAt  = useRef('');
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const channelRef = useRef<any>(null);
+  const seenIds = useRef(new Set<string>());
+  const lastCreatedAt = useRef('');
 
-  // ── 초기 로딩 ──────────────────────────────────────────────
   useEffect(() => {
-    const t = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
-    if (!t) { router.push('/login'); return; }
-    setToken(t);
-
     try {
-      const u = JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || '{}');
-      setUserId(u.id || null);
-      setNickname(u.nickname || '');
-    } catch {}
+      const t = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+      if (!t) { router.push('/login'); return; }
+      setToken(t);
 
-    // 스팟 정보 + 참여자
-    fetch(`/api/spots/${id}`)
-      .then(r => r.json())
-      .then(d => {
-        setSpotTitle(d.data?.title || '채팅방');
-        const parts: Participant[] = (d.data?.participations || []).filter((p: any) => p.status === 'joined');
-        setParticipants(parts);
-      });
+      const stored = localStorage.getItem('user') || sessionStorage.getItem('user');
+      if (stored) {
+        const u = JSON.parse(stored);
+        setUserId(u.id || null);
+        setNickname(u.nickname || '');
+      }
 
-    // 최근 메시지 50개
-    fetch(`/api/spots/${id}/messages?limit=50`, { headers: { Authorization: `Bearer ${t}` } })
-      .then(r => r.json())
-      .then(d => {
-        const msgs: Message[] = d.data || [];
-        msgs.forEach(m => seenIds.current.add(m.id));
-        setMessages(msgs);
-        if (msgs.length) lastCreatedAt.current = msgs[msgs.length - 1].created_at;
-      })
-      .finally(() => setLoading(false));
+      fetch(`/api/spots/${id}`)
+        .then(r => r.json())
+        .then(d => {
+          setSpotTitle(d.data?.title || '채팅방');
+          const parts: Participant[] = (d.data?.participations || []).filter(
+            (p: any) => p.status === 'joined' || p.status === null
+          );
+          setParticipants(parts);
+        })
+        .catch(() => {});
+
+      fetch(`/api/spots/${id}/messages?limit=50`, { headers: { Authorization: `Bearer ${t}` } })
+        .then(r => r.json())
+        .then(d => {
+          const msgs: Message[] = d.data || [];
+          msgs.forEach(m => seenIds.current.add(m.id));
+          setMessages(msgs);
+          if (msgs.length) lastCreatedAt.current = msgs[msgs.length - 1].created_at;
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    } catch (e: any) {
+      setPageError(e?.message || '초기화 오류');
+      setLoading(false);
+    }
   }, [id]);
 
-  // ── 참여자 여부 ────────────────────────────────────────────
   useEffect(() => {
-    if (userId) setIsParticipant(participants.some(p => p.user_id === userId));
+    if (userId && participants.length > 0) {
+      setIsParticipant(participants.some(p => p.user_id === userId));
+    }
   }, [userId, participants]);
 
-  // ── Supabase Realtime broadcast 구독 ───────────────────────
+  // Supabase Realtime — 동적 import로 안전하게
   useEffect(() => {
-    const channel = supabase
-      .channel(`chat:${id}`, { config: { broadcast: { ack: false } } })
-      .on('broadcast', { event: 'new_message' }, ({ payload }: { payload: Message }) => {
-        if (!seenIds.current.has(payload.id)) {
-          seenIds.current.add(payload.id);
-          setMessages(prev => [...prev, payload]);
-          lastCreatedAt.current = payload.created_at;
-        }
-      })
-      .subscribe(status => {
-        setConnected(status === 'SUBSCRIBED');
-      });
+    if (!id) return;
+    let channel: any = null;
 
-    channelRef.current = channel;
-    return () => { supabase.removeChannel(channel); };
+    import('@/lib/supabase').then(({ supabase }) => {
+      try {
+        channel = supabase
+          .channel(`chat:${id}`, { config: { broadcast: { ack: false } } })
+          .on('broadcast', { event: 'new_message' }, ({ payload }: { payload: Message }) => {
+            if (!seenIds.current.has(payload.id)) {
+              seenIds.current.add(payload.id);
+              setMessages(prev => [...prev, payload]);
+              lastCreatedAt.current = payload.created_at;
+            }
+          })
+          .subscribe((status: string) => {
+            setConnected(status === 'SUBSCRIBED');
+          });
+        channelRef.current = channel;
+      } catch (e) {
+        console.error('Realtime 연결 실패:', e);
+      }
+    }).catch(e => console.error('Supabase import 실패:', e));
+
+    return () => {
+      if (channel) {
+        import('@/lib/supabase').then(({ supabase }) => {
+          supabase.removeChannel(channel);
+        }).catch(() => {});
+      }
+    };
   }, [id]);
 
-  // ── 폴백 폴링 (30초마다 — 브로드캐스트 놓친 메시지 보완) ──
+  // 폴백 폴링
   useEffect(() => {
     if (!token || loading) return;
     const timer = setInterval(() => {
@@ -114,10 +138,9 @@ export default function SpotChatPage() {
       })
         .then(r => r.json())
         .then(d => {
-          const newMsgs: Message[] = d.data || [];
-          const fresh = newMsgs.filter(m => !seenIds.current.has(m.id));
+          const fresh = (d.data || []).filter((m: Message) => !seenIds.current.has(m.id));
           if (fresh.length) {
-            fresh.forEach(m => seenIds.current.add(m.id));
+            fresh.forEach((m: Message) => seenIds.current.add(m.id));
             setMessages(prev => [...prev, ...fresh]);
             lastCreatedAt.current = fresh[fresh.length - 1].created_at;
           }
@@ -127,12 +150,10 @@ export default function SpotChatPage() {
     return () => clearInterval(timer);
   }, [id, token, loading]);
 
-  // ── 스크롤 ─────────────────────────────────────────────────
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // ── 메시지 전송 ────────────────────────────────────────────
   const sendMessage = async (type: 'text' | 'status' = 'text', content?: string) => {
     const msg = content || input.trim();
     if (!msg || !token || sending) return;
@@ -147,19 +168,21 @@ export default function SpotChatPage() {
       const data = await res.json();
       if (data.success && data.data) {
         const saved: Message = data.data;
-        // 내 화면에 즉시 표시
         if (!seenIds.current.has(saved.id)) {
           seenIds.current.add(saved.id);
           setMessages(prev => [...prev, saved]);
           lastCreatedAt.current = saved.created_at;
         }
-        // 다른 사람들에게 실시간 브로드캐스트
         channelRef.current?.send({
           type: 'broadcast',
           event: 'new_message',
           payload: saved,
         });
+      } else if (data.message) {
+        alert(data.message);
       }
+    } catch {
+      alert('메시지 전송 실패');
     } finally {
       setSending(false);
     }
@@ -175,7 +198,21 @@ export default function SpotChatPage() {
   const mannerColor = (s: number) =>
     s >= 38 ? 'text-emerald-600' : s >= 30 ? 'text-amber-500' : 'text-red-500';
 
-  // ── 렌더 ───────────────────────────────────────────────────
+  const safeFormat = (dateStr: string) => {
+    try { return format(new Date(dateStr), 'HH:mm'); } catch { return ''; }
+  };
+
+  if (pageError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen gap-4 p-8">
+        <p className="text-4xl">⚠️</p>
+        <p className="text-gray-700 font-bold text-center">채팅을 불러올 수 없어요</p>
+        <p className="text-sm text-gray-400 text-center">{pageError}</p>
+        <button onClick={() => router.back()} className="btn-primary px-6 py-2.5 text-sm">돌아가기</button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen bg-gray-50">
 
@@ -183,7 +220,7 @@ export default function SpotChatPage() {
       <header className="bg-white border-b px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
         <button onClick={() => router.back()} className="text-gray-500 text-lg">←</button>
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-gray-900 truncate">{spotTitle}</p>
+          <p className="font-bold text-gray-900 truncate">{spotTitle || '채팅방'}</p>
           <div className="flex items-center gap-1.5">
             <span className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-400' : 'bg-gray-300'}`} />
             <span className="text-xs text-gray-400">
@@ -191,7 +228,6 @@ export default function SpotChatPage() {
             </span>
           </div>
         </div>
-        {/* 참여자 아바타 */}
         <div className="flex -space-x-2">
           {participants.slice(0, 4).map(p => (
             <div
@@ -199,7 +235,7 @@ export default function SpotChatPage() {
               title={p.users?.nickname}
               className="w-7 h-7 rounded-full bg-primary border-2 border-white flex items-center justify-center text-white text-xs font-bold"
             >
-              {p.users?.nickname?.[0]}
+              {p.users?.nickname?.[0] || '?'}
             </div>
           ))}
           {participants.length > 4 && (
@@ -210,7 +246,7 @@ export default function SpotChatPage() {
         </div>
       </header>
 
-      {/* 상태 공유 바 (참여자만) */}
+      {/* 상태 공유 바 */}
       {isParticipant && (
         <div className="bg-white border-b px-3 py-2 flex items-center gap-2 overflow-x-auto">
           <span className="text-xs text-gray-400 flex-shrink-0 font-medium">내 상태:</span>
@@ -221,7 +257,7 @@ export default function SpotChatPage() {
               className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-colors border ${
                 myStatus === s.value
                   ? 'bg-primary text-white border-primary'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-primary'
+                  : 'bg-white text-gray-600 border-gray-200'
               }`}
             >
               {s.label}
@@ -248,7 +284,7 @@ export default function SpotChatPage() {
             return (
               <div key={msg.id} className="flex justify-center my-1">
                 <span className="bg-amber-50 border border-amber-100 text-amber-700 text-xs px-3 py-1 rounded-full">
-                  {msg.message_type === 'notice' ? '📢 ' : ''}{msg.message}
+                  {msg.message}
                 </span>
               </div>
             );
@@ -264,15 +300,11 @@ export default function SpotChatPage() {
               <div className={`max-w-[72%] flex flex-col gap-0.5 ${mine ? 'items-end' : 'items-start'}`}>
                 {!mine && <span className="text-xs text-gray-400 px-1">{msg.users?.nickname}</span>}
                 <div className={`px-3 py-2 rounded-2xl text-sm leading-relaxed break-words ${
-                  mine
-                    ? 'bg-primary text-white rounded-br-sm'
-                    : 'bg-white text-gray-900 shadow-sm rounded-bl-sm'
+                  mine ? 'bg-primary text-white rounded-br-sm' : 'bg-white text-gray-900 shadow-sm rounded-bl-sm'
                 }`}>
                   {msg.message}
                 </div>
-                <span className="text-xs text-gray-300 px-1">
-                  {format(new Date(msg.created_at), 'HH:mm')}
-                </span>
+                <span className="text-xs text-gray-300 px-1">{safeFormat(msg.created_at)}</span>
               </div>
             </div>
           );
@@ -280,7 +312,7 @@ export default function SpotChatPage() {
         <div ref={bottomRef} />
       </div>
 
-      {/* 참여자 목록 (접기/펼치기) */}
+      {/* 참여자 목록 */}
       {participants.length > 0 && (
         <details className="bg-white border-t px-4 py-2 group">
           <summary className="flex items-center justify-between list-none cursor-pointer text-xs text-gray-400 select-none">
@@ -291,13 +323,13 @@ export default function SpotChatPage() {
             {participants.map(p => (
               <div key={p.user_id} className="flex items-center gap-1.5 bg-gray-50 rounded-full px-2.5 py-1">
                 <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
-                  {p.users?.nickname?.[0]}
+                  {p.users?.nickname?.[0] || '?'}
                 </div>
                 <span className="text-xs font-medium text-gray-700">{p.users?.nickname}</span>
                 <span className={`text-xs font-bold ${mannerColor(p.users?.manner_score ?? 36.5)}`}>
                   ★{(p.users?.manner_score ?? 36.5).toFixed(1)}
                 </span>
-                {p.user_id === userId && <span className="text-xs text-indigo-400 font-semibold">나</span>}
+                {p.user_id === userId && <span className="text-xs text-primary font-semibold">나</span>}
               </div>
             ))}
           </div>
@@ -321,14 +353,15 @@ export default function SpotChatPage() {
           <button
             onClick={() => sendMessage()}
             disabled={!input.trim() || sending}
-            className="bg-primary text-white px-4 py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 flex-shrink-0 transition-opacity"
+            className="bg-primary text-white px-4 py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 flex-shrink-0"
           >
             {sending ? '...' : '전송'}
           </button>
         </div>
       ) : (
-        <div className="bg-gray-50 border-t px-4 py-3 text-center text-sm text-gray-400">
-          채팅방에 참여한 멤버만 메시지를 보낼 수 있습니다
+        <div className="bg-gray-50 border-t px-4 py-4 text-center">
+          <p className="text-sm text-gray-400 mb-2">채팅방에 참여한 멤버만 메시지를 보낼 수 있습니다</p>
+          <button onClick={() => router.back()} className="text-xs text-primary font-semibold">← 스팟으로 돌아가기</button>
         </div>
       )}
     </div>

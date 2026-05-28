@@ -38,7 +38,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       .select('id')
       .eq('spot_id', params.id)
       .eq('user_id', user.id)
-      .eq('status', 'joined')
+      .or('status.eq.joined,status.is.null')
       .single();
     if (!part) return error('채팅방에 참여한 사용자만 메시지를 보낼 수 있습니다', 403);
 
