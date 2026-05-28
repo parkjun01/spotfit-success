@@ -377,8 +377,8 @@ export default function SpotChatPage() {
         </details>
       )}
 
-      {/* 입력창 */}
-      {isParticipant ? (
+      {/* 입력창 — 로그인된 사용자면 누구나 표시, API에서 참여 여부 체크 */}
+      {token ? (
         <div className="bg-white border-t px-3 py-3 flex gap-2 items-end">
           <textarea
             className="flex-1 input resize-none max-h-24 text-sm py-2.5"
@@ -401,8 +401,8 @@ export default function SpotChatPage() {
         </div>
       ) : (
         <div className="bg-gray-50 border-t px-4 py-4 text-center">
-          <p className="text-sm text-gray-400 mb-2">채팅방에 참여한 멤버만 메시지를 보낼 수 있습니다</p>
-          <button onClick={() => router.back()} className="text-xs text-primary font-semibold">← 스팟으로 돌아가기</button>
+          <p className="text-sm text-gray-400 mb-2">로그인이 필요합니다</p>
+          <button onClick={() => router.push('/login')} className="text-xs text-primary font-semibold">로그인하기 →</button>
         </div>
       )}
     </div>
