@@ -156,6 +156,37 @@ export default function SpotDetailPage() {
           ))}
         </div>
 
+        {/* 길 안내 */}
+        {spot.latitude && spot.longitude && (
+          <div className="card">
+            <p className="text-sm font-bold text-gray-700 mb-2">길 안내</p>
+            <p className="text-xs text-gray-400 mb-3">{spot.location_name}</p>
+            <div className="flex gap-2">
+              <a
+                href={`https://map.kakao.com/link/to/${encodeURIComponent(spot.location_name)},${spot.latitude},${spot.longitude}`}
+                target="_blank" rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-yellow-400 text-yellow-900 text-xs font-bold hover:bg-yellow-500 transition-colors"
+              >
+                카카오맵
+              </a>
+              <a
+                href={`https://map.naver.com/index.nhn?elng=${spot.longitude}&elat=${spot.latitude}&etext=${encodeURIComponent(spot.location_name)}&menu=route`}
+                target="_blank" rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-emerald-500 text-white text-xs font-bold hover:bg-emerald-600 transition-colors"
+              >
+                네이버지도
+              </a>
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${spot.latitude},${spot.longitude}&travelmode=walking`}
+                target="_blank" rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-blue-500 text-white text-xs font-bold hover:bg-blue-600 transition-colors"
+              >
+                구글지도
+              </a>
+            </div>
+          </div>
+        )}
+
         {/* 나이 제한 */}
         {(spot.min_age || spot.max_age) && (
           <div className="card flex items-center gap-2">
