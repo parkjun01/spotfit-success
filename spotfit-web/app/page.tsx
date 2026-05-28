@@ -34,7 +34,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!localStorage.getItem('access_token')) {
+    if (!localStorage.getItem('access_token') && !sessionStorage.getItem('access_token')) {
       router.push('/login');
       return;
     }
