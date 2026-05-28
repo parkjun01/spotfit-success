@@ -266,11 +266,12 @@ export default function HomePage() {
       {/* 하단 탭 */}
       <nav className="bg-white border-t border-gray-100 flex fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-20">
         {[
-          { href: '/', icon: <MapIcon className="w-6 h-6" />, label: '스팟' },
-          { href: '/ranking', icon: <TrophyIcon className="w-6 h-6" />, label: '랭킹' },
-          { href: '/mypage', icon: <UserIcon className="w-6 h-6" />, label: '마이' },
-        ].map(({ href, icon, label }) => (
-          <Link key={href} href={href} className="flex-1 flex flex-col items-center py-2.5 text-gray-300 hover:text-primary transition-colors">
+          { href: '/', icon: <MapIcon className="w-6 h-6" />, label: '스팟', active: true },
+          { href: '/benefits', icon: <GiftIcon className="w-6 h-6" />, label: '혜택', active: false },
+          { href: '/ranking', icon: <TrophyIcon className="w-6 h-6" />, label: '랭킹', active: false },
+          { href: '/mypage', icon: <UserIcon className="w-6 h-6" />, label: '마이', active: false },
+        ].map(({ href, icon, label, active }) => (
+          <Link key={href} href={href} className={`flex-1 flex flex-col items-center py-2.5 transition-colors ${active ? 'text-primary' : 'text-gray-300 hover:text-gray-400'}`}>
             {icon}
             <span className="text-xs mt-0.5 font-semibold">{label}</span>
           </Link>
@@ -280,6 +281,13 @@ export default function HomePage() {
   );
 }
 
+function GiftIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+    </svg>
+  );
+}
 function MapIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

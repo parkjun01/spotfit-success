@@ -34,6 +34,11 @@ export default function NewSpotPage() {
   });
 
   const [hostNickname, setHostNickname] = useState('');
+  const [gpxFile, setGpxFile] = useState<File | null>(null);
+  const [noShowPrevention, setNoShowPrevention] = useState(false);
+
+  const GPX_SPORTS = ['러닝', '등산', '자전거', '클라이밍', '걷기'];
+  const selectedSportName = sports.find(s => s.id === form.sportId)?.name || '';
 
   useEffect(() => {
     const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
@@ -453,6 +458,57 @@ export default function NewSpotPage() {
             </div>
           </div>
         )}
+
+        {/* GPX 경로 업로드 (러닝/등산/자전거 등) */}
+        {GPX_SPORTS.includes(selectedSportName) && (
+          <div className="card space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-bold text-gray-800">📍 GPX 경로 파일 <span className="text-gray-400 font-normal text-xs">(선택사항)</span></p>
+            </div>
+            <p className="text-xs text-gray-400">러닝/등산 코스를 GPX 파일로 공유하면 참여자들이 경로를 미리 확인할 수 있어요.</p>
+            <label className={`flex items-center gap-3 p-3 rounded-xl border-2 border-dashed cursor-pointer transition-colors ${
+              gpxFile ? 'border-primary bg-orange-50' : 'border-gray-200 hover:border-primary'
+            }`}>
+              <span className="text-2xl">{gpxFile ? '✅' : '📂'}</span>
+              <div className="flex-1 min-w-0">
+                {gpxFile ? (
+                  <>
+                    <p className="text-sm font-bold text-primary truncate">{gpxFile.name}</p>
+                    <p className="text-xs text-gray-400">{(gpxFile.size / 1024).toFixed(1)} KB</p>
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-500">GPX 파일 선택 (.gpx)</p>
+                )}
+              </div>
+              {gpxFile && (
+                <button type="button" onClick={e => { e.preventDefault(); setGpxFile(null); }} className="text-gray-400 text-sm">✕</button>
+              )}
+              <input type="file" accept=".gpx" className="hidden" onChange={e => setGpxFile(e.target.files?.[0] || null)} />
+            </label>
+          </div>
+        )}
+
+        {/* 노쇼 방지 */}
+        <div className="card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-bold text-gray-800">🚫 노쇼 방지</p>
+              <p className="text-xs text-gray-400 mt-0.5">참여자가 무단 불참 시 매너점수 차감</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setNoShowPrevention(v => !v)}
+              className={`w-12 h-6 rounded-full transition-colors relative ${noShowPrevention ? 'bg-primary' : 'bg-gray-200'}`}
+            >
+              <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${noShowPrevention ? 'translate-x-6' : 'translate-x-0.5'}`} />
+            </button>
+          </div>
+          {noShowPrevention && (
+            <div className="mt-3 bg-orange-50 rounded-xl p-3">
+              <p className="text-xs text-orange-700 font-medium">✓ 노쇼 방지 활성화 시 참여자가 24시간 전 취소하지 않으면 매너점수 -2점이 부과됩니다.</p>
+            </div>
+          )}
+        </div>
 
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
