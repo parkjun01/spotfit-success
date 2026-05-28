@@ -23,12 +23,9 @@ interface Props {
 
 async function geocode(address: string): Promise<{ lat: number; lng: number } | null> {
   try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`,
-      { headers: { 'Accept-Language': 'ko' } }
-    );
+    const res = await fetch(`/api/geocode?address=${encodeURIComponent(address)}`);
     const data = await res.json();
-    if (data[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    if (data.success) return { lat: data.data.lat, lng: data.data.lng };
   } catch {}
   return null;
 }

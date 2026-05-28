@@ -127,14 +127,9 @@ export default function HomePage() {
 
   const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
     try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=14`,
-        { headers: { 'Accept-Language': 'ko', 'User-Agent': 'SpotFit/1.0' } }
-      );
+      const res = await fetch(`/api/reverse-geocode?lat=${lat}&lng=${lng}`);
       const data = await res.json();
-      const a = data.address;
-      return [a?.suburb || a?.neighbourhood || a?.quarter, a?.city_district || a?.county, a?.city || a?.province]
-        .filter(Boolean).slice(0, 2).join(' ') || data.display_name?.split(',')[0] || '현재 위치';
+      return data.data?.name || '현재 위치';
     } catch { return '현재 위치'; }
   };
 
