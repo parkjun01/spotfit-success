@@ -11,7 +11,7 @@ interface Props {
 
 function dotSvgUrl(color: string) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20">
-    <circle cx="10" cy="10" r="8" fill="${color}" stroke="white" stroke-width="3"/>
+    <circle cx="10" cy="10" r="8" fill="${color}" stroke="#0A0A0B" stroke-width="2.5"/>
   </svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
@@ -34,11 +34,10 @@ export default function RouteMap({ start, end, routeCoords, distance, duration }
       if (routeCoords.length > 0) {
         const path = routeCoords.map(([lat, lng]) => new kakao.maps.LatLng(lat, lng));
         new kakao.maps.Polyline({
-          map,
-          path,
+          map, path,
           strokeWeight: 5,
-          strokeColor: '#F97316',
-          strokeOpacity: 0.85,
+          strokeColor: '#c9f236',
+          strokeOpacity: 0.9,
           strokeStyle: 'solid',
         });
         const bounds = new kakao.maps.LatLngBounds();
@@ -49,18 +48,12 @@ export default function RouteMap({ start, end, routeCoords, distance, duration }
       new kakao.maps.Marker({
         map,
         position: new kakao.maps.LatLng(start.lat, start.lng),
-        image: new kakao.maps.MarkerImage(
-          dotSvgUrl('#3B82F6'), new kakao.maps.Size(20, 20),
-          { offset: new kakao.maps.Point(10, 10) }
-        ),
+        image: new kakao.maps.MarkerImage(dotSvgUrl('#3B82F6'), new kakao.maps.Size(20, 20), { offset: new kakao.maps.Point(10, 10) }),
       });
       new kakao.maps.Marker({
         map,
         position: new kakao.maps.LatLng(end.lat, end.lng),
-        image: new kakao.maps.MarkerImage(
-          dotSvgUrl('#F97316'), new kakao.maps.Size(20, 20),
-          { offset: new kakao.maps.Point(10, 10) }
-        ),
+        image: new kakao.maps.MarkerImage(dotSvgUrl('#c9f236'), new kakao.maps.Size(20, 20), { offset: new kakao.maps.Point(10, 10) }),
       });
     };
 
@@ -73,23 +66,23 @@ export default function RouteMap({ start, end, routeCoords, distance, duration }
 
   return (
     <div>
-      <div className="flex gap-2 mb-3">
-        <div className="flex-1 bg-blue-50 rounded-xl p-3 text-center">
-          <p className="text-xl font-black text-blue-600">{distKm}</p>
-          <p className="text-xs text-gray-400 mt-0.5">거리</p>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <div style={{ flex: 1, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 12, padding: 12, textAlign: 'center' }}>
+          <p style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 22, color: '#60A5FA', lineHeight: 1 }}>{distKm}</p>
+          <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: '#8A8A9A', marginTop: 4 }}>거리</p>
         </div>
-        <div className="flex-1 bg-orange-50 rounded-xl p-3 text-center">
-          <p className="text-xl font-black text-primary">{minutes}분</p>
-          <p className="text-xs text-gray-400 mt-0.5">도보 예상</p>
+        <div style={{ flex: 1, background: 'rgba(201,242,54,0.08)', border: '1px solid rgba(201,242,54,0.25)', borderRadius: 12, padding: 12, textAlign: 'center' }}>
+          <p style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 22, color: '#c9f236', lineHeight: 1 }}>{minutes}분</p>
+          <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: '#8A8A9A', marginTop: 4 }}>도보 예상</p>
         </div>
       </div>
-      <div ref={mapRef} style={{ height: '260px', borderRadius: '12px' }} />
-      <div className="flex items-center gap-3 mt-2 px-1">
-        <span className="flex items-center gap-1.5 text-xs text-gray-500">
-          <span className="inline-block w-3 h-3 rounded-full bg-blue-500" />내 위치
+      <div ref={mapRef} style={{ height: '260px', borderRadius: 12 }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 10, padding: '0 4px' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#8A8A9A' }}>
+          <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: '#3B82F6' }} />내 위치
         </span>
-        <span className="flex items-center gap-1.5 text-xs text-gray-500">
-          <span className="inline-block w-3 h-3 rounded-full bg-primary" />{end.name}
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#8A8A9A' }}>
+          <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: '#c9f236' }} />{end.name}
         </span>
       </div>
     </div>

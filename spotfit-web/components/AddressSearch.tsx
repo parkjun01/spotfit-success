@@ -40,27 +40,20 @@ export default function AddressSearch({ value, onChange, placeholder = '주소 �
       oncomplete: async (data: any) => {
         const address = data.roadAddress || data.jibunAddress;
         const coords = await geocode(address);
-        onChange({
-          address,
-          zonecode: data.zonecode,
-          sido: data.sido,
-          sigungu: data.sigungu,
-          lat: coords?.lat,
-          lng: coords?.lng,
-        });
+        onChange({ address, zonecode: data.zonecode, sido: data.sido, sigungu: data.sigungu, lat: coords?.lat, lng: coords?.lng });
       },
-      theme: { bgColor: '#4F46E5', searchBgColor: '#4F46E5', queryTextColor: '#FFFFFF' },
+      theme: { bgColor: '#131314', searchBgColor: '#1E1E22', queryTextColor: '#c9f236' },
     }).open();
   };
 
   return (
     <div>
       {label && (
-        <label className="text-xs font-medium text-gray-600 mb-1 block">
-          {label} {required && <span className="text-red-400">*</span>}
+        <label style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#8A8A9A', marginBottom: 6, display: 'block' }}>
+          {label} {required && <span style={{ color: '#EF4444' }}>*</span>}
         </label>
       )}
-      <div className="flex gap-2">
+      <div style={{ display: 'flex', gap: 8 }}>
         <input
           className="input flex-1"
           value={value}
@@ -72,7 +65,7 @@ export default function AddressSearch({ value, onChange, placeholder = '주소 �
         <button
           type="button"
           onClick={openSearch}
-          className="px-3 py-2.5 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors whitespace-nowrap"
+          style={{ padding: '0 16px', background: '#c9f236', color: '#171e00', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', borderRadius: 10, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s', flexShrink: 0 }}
         >
           검색
         </button>
