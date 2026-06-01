@@ -2,33 +2,90 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
 
-@layer base {
-  :root {
-    --color-primary: #F97316;
-    --color-secondary: #EA580C;
-  }
-  body {
-    @apply bg-gray-50 text-gray-900;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  }
+:root {
+  --color-background:       #131314;
+  --color-surface:          #141416;
+  --color-elevated:         #1E1E22;
+  --color-surface-high:     #2a2a2b;
+  --color-border:           #2A2A32;
+  --color-primary:          #c9f236;
+  --color-primary-on:       #171e00;
+  --color-text-primary:     #F0F0F2;
+  --color-text-secondary:   #8A8A9A;
+  --color-text-disabled:    #3E3E4A;
+  --color-on-background:    #e5e2e3;
+  --color-on-surface-variant: #c5c9ae;
+  --color-success:          #22C55E;
+  --color-danger:           #EF4444;
+  --color-orange:           #fd591e;
+  --nav-bottom-h:           68px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-on-background);
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--color-background); }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 10px; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.45s ease-out both; }
+
+@keyframes limePulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(201,242,54,0.2); }
+  50%       { box-shadow: 0 0 28px rgba(201,242,54,0.45); }
+}
+.lime-glow { animation: limePulse 2.4s ease-in-out infinite; }
+
+@keyframes pulsering {
+  0%   { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(2.5); opacity: 0; }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-primary text-white font-bold py-3 px-6 rounded-xl hover:bg-orange-600 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply flex items-center justify-center w-full h-[52px] bg-primary text-primary-on font-headline font-bold text-[17px] uppercase tracking-widest rounded-lg transition-all active:scale-[0.97] hover:shadow-[0_0_24px_rgba(201,242,54,0.3)];
   }
   .btn-secondary {
-    @apply border-2 border-primary text-primary font-bold py-3 px-6 rounded-xl hover:bg-orange-50 active:scale-95 transition-all;
+    @apply flex items-center justify-center gap-1 px-5 py-2.5 bg-elevated text-on-bg font-headline font-semibold text-sm uppercase tracking-wider rounded-xl border border-border-dark transition-all hover:border-primary active:scale-[0.96];
   }
   .card {
-    @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-4;
+    @apply bg-elevated border border-border-dark rounded-2xl p-4 transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(0,0,0,0.4)];
   }
   .input {
-    @apply w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors;
+    @apply w-full bg-elevated border border-border-dark rounded-xl px-4 py-3 text-sm text-on-bg placeholder:text-text-disabled outline-none focus:border-primary transition-colors;
   }
-  .badge {
-    @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold;
+  .pill {
+    @apply inline-flex items-center gap-1 px-3 py-1 rounded-full font-headline font-semibold text-[12px] uppercase tracking-wider border border-border-dark bg-surface-high text-text-secondary;
+  }
+  .pill-active {
+    @apply bg-primary text-primary-on border-primary;
+  }
+  .bottom-nav-link {
+    @apply flex flex-col items-center justify-center gap-[3px] text-text-secondary font-headline text-[11px] font-semibold uppercase tracking-wider px-2 py-1 min-w-[56px] transition-colors;
+  }
+  .bottom-nav-link.active {
+    @apply text-primary;
+    filter: drop-shadow(0 0 6px rgba(201,242,54,0.35));
   }
 }

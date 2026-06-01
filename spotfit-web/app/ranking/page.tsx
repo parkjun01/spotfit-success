@@ -7,173 +7,233 @@ interface RankEntry {
   activityScore: number; spotCount: number; subscription_status?: string;
 }
 
-const AGE_FILTERS = ['전체', '20대', '30대', '40대'];
-const GENDER_FILTERS = ['전체', '남성', '여성'];
+const NAV = [
+  { href: '/', icon: 'home', label: 'Home' },
+  { href: '/?view=map', icon: 'map', label: 'Explore' },
+  { href: '/spots/new', icon: 'add_box', label: 'Host' },
+  { href: '/ranking', icon: 'leaderboard', label: 'Ranks', active: true },
+  { href: '/benefits', icon: 'local_offer', label: '혜택' },
+];
 
 export default function RankingPage() {
   const [rankings, setRankings] = useState<RankEntry[]>([]);
   const [sports, setSports] = useState<{ id: string; name: string }[]>([]);
   const [period, setPeriod] = useState<'weekly' | 'monthly'>('weekly');
   const [sportId, setSportId] = useState('');
-  const [ageFilter, setAgeFilter] = useState('전체');
-  const [genderFilter, setGenderFilter] = useState('전체');
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('all');
 
   useEffect(() => { fetch('/api/sports').then(r => r.json()).then(d => setSports(d.data || [])); }, []);
 
   useEffect(() => {
     setLoading(true);
-    const params = new URLSearchParams({
-      type: period,
-      ...(sportId && { sportId }),
-      ...(ageFilter !== '전체' && { age: ageFilter }),
-      ...(genderFilter !== '전체' && { gender: genderFilter }),
-    });
+    const params = new URLSearchParams({ type: period, ...(sportId && { sportId }) });
     fetch(`/api/rankings?${params}`)
       .then(r => r.json())
       .then(d => setRankings(d.data || []))
       .finally(() => setLoading(false));
-  }, [period, sportId, ageFilter, genderFilter]);
+  }, [period, sportId]);
 
-  const medal = (i: number) => i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : null;
-  const mannerColor = (s: number) => s >= 38 ? 'text-emerald-600' : s >= 30 ? 'text-amber-500' : 'text-red-500';
+  const top3 = [rankings[1], rankings[0], rankings[2]];
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
-      <header className="bg-white border-b px-4 py-4 sticky top-0 z-10">
-        <h1 className="text-2xl font-black text-gray-900">랭킹 <span className="text-primary">보드</span></h1>
+    <div style={{ minHeight: '100vh', background: '#131314', paddingBottom: 140 }}>
+
+      {/* Top Nav */}
+      <header style={{
+        position: 'sticky', top: 0, zIndex: 40, height: 64,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 16px',
+        background: 'rgba(19,19,20,0.95)', backdropFilter: 'blur(12px)',
+        borderBottom: '1px solid #2A2A32',
+      }}>
+        <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, color: '#c9f236', letterSpacing: '0.05em' }}>RANKING</span>
+        <button style={{ width: 36, height: 36, borderRadius: '50%', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e5e2e3' }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 22 }}>emoji_events</span>
+        </button>
       </header>
 
-      {/* 기간 선택 */}
-      <div className="px-4 pt-4 flex gap-2">
-        {(['weekly', 'monthly'] as const).map(p => (
-          <button key={p} onClick={() => setPeriod(p)}
-            className={`flex-1 py-2.5 rounded-xl font-extrabold text-sm transition-colors ${
-              period === p ? 'bg-primary text-white shadow-sm' : 'bg-white text-gray-400 border border-gray-200'
-            }`}>
-            {p === 'weekly' ? '이번 주' : '이번 달'}
+      {/* Season Banner */}
+      <div style={{ background: 'linear-gradient(90deg,#1a2200,#0d1a00)', borderBottom: '1px solid #2A2A32', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className="material-symbols-outlined" style={{ color: '#c9f236', fontSize: 18, fontVariationSettings: "'FILL' 1" }}>trophy</span>
+          <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, fontWeight: 700, color: '#c9f236', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Season 3 · 2026</span>
+        </div>
+        <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, color: '#8A8A9A' }}>12일 남음</span>
+      </div>
+
+      {/* Podium */}
+      {!loading && rankings.length >= 3 && (
+        <section style={{ background: 'linear-gradient(175deg,#1a2200 0%,#131314 60%)', padding: '24px 16px', borderBottom: '1px solid #2A2A32' }}>
+          <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#c5c9ae', textAlign: 'center', marginBottom: 24 }}>🏆 TOP 3 PLAYERS</p>
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 12, height: 200 }}>
+            {top3.map((r, idx) => {
+              if (!r) return null;
+              const isFirst = idx === 1;
+              const avSize = isFirst ? 64 : idx === 0 ? 52 : 48;
+              const barHeight = isFirst ? 100 : idx === 0 ? 72 : 50;
+              const borderColor = isFirst ? '#c9f236' : idx === 0 ? '#C0C0C0' : '#CD7F32';
+              const score = isFirst ? rankings[0] : idx === 0 ? rankings[1] : rankings[2];
+              const rank = isFirst ? 1 : idx === 0 ? 2 : 3;
+              return (
+                <div key={r.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                  <div style={{ position: 'relative' }}>
+                    {isFirst && <div style={{ position: 'absolute', top: -22, left: '50%', transform: 'translateX(-50%)', fontSize: 20 }}>👑</div>}
+                    <div style={{
+                      width: avSize, height: avSize, borderRadius: '50%',
+                      background: '#1E1E22', border: `${isFirst ? 3 : 2}px solid ${borderColor}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#e5e2e3',
+                    }}>
+                      {r.nickname?.[0]}
+                    </div>
+                    <div style={{
+                      position: 'absolute', bottom: -4, right: -4,
+                      width: 22, height: 22, borderRadius: '50%',
+                      background: borderColor, border: '2px solid #131314',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 700,
+                      color: isFirst ? '#171e00' : '#fff',
+                    }}>{rank}</div>
+                  </div>
+                  <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', color: isFirst ? '#c9f236' : '#e5e2e3', maxWidth: 72, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {r.nickname}
+                  </p>
+                  <p style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: isFirst ? 22 : 18, color: '#c9f236', lineHeight: 1 }}>
+                    {r.activityScore || Math.round(r.manner_score * 100)}
+                  </p>
+                  <div style={{
+                    width: 80, height: barHeight,
+                    background: isFirst ? '#c9f236' : '#2a2a2b',
+                    borderRadius: '8px 8px 0 0',
+                    display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+                    paddingTop: 8,
+                    fontFamily: 'Bebas Neue, sans-serif', fontSize: 24,
+                    color: isFirst ? '#171e00' : '#8A8A9A',
+                  }}>{rank}</div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Tab Bar */}
+      <div style={{ display: 'flex', borderBottom: '1px solid #2A2A32', background: '#141416', position: 'sticky', top: 64, zIndex: 30 }}>
+        {[
+          { key: 'all', label: '전체' },
+          { key: 'weekly', label: '이번 주' },
+          { key: 'monthly', label: '이번 달' },
+          { key: 'nearby', label: '내 주변' },
+        ].map(tab => (
+          <button key={tab.key} onClick={() => { setActiveTab(tab.key); if (tab.key === 'weekly') setPeriod('weekly'); if (tab.key === 'monthly') setPeriod('monthly'); }}
+            style={{
+              flex: 1, padding: '12px 0',
+              fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
+              color: activeTab === tab.key ? '#c9f236' : '#8A8A9A',
+              borderBottom: `2px solid ${activeTab === tab.key ? '#c9f236' : 'transparent'}`,
+              background: 'none', cursor: 'pointer', transition: 'color 0.2s',
+            }}>
+            {tab.label}
           </button>
         ))}
       </div>
 
-      {/* 종목 필터 */}
-      <div className="px-4 pt-3 flex gap-2 overflow-x-auto scrollbar-none">
-        {[{ id: '', name: '전체 종목' }, ...sports].map(s => (
-          <button key={s.id} onClick={() => setSportId(s.id)}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-              sportId === s.id ? 'bg-primary text-white' : 'bg-white text-gray-500 border border-gray-200'
-            }`}>
+      {/* Sport Filter */}
+      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '12px 16px' }} className="no-scrollbar">
+        {[{ id: '', name: 'ALL' }, ...sports.slice(0, 6)].map(s => (
+          <button key={s.id} onClick={() => setSportId(s.id)} style={{
+            flexShrink: 0, padding: '5px 14px', borderRadius: 999,
+            fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, textTransform: 'uppercase',
+            background: sportId === s.id ? '#c9f236' : '#1E1E22',
+            color: sportId === s.id ? '#171e00' : '#8A8A9A',
+            border: `1px solid ${sportId === s.id ? '#c9f236' : '#2A2A32'}`,
+            cursor: 'pointer', transition: 'all 0.2s',
+          }}>
             {s.name}
           </button>
         ))}
       </div>
 
-      {/* 나이/성별 필터 */}
-      <div className="px-4 pt-2 flex gap-4">
-        <div className="flex gap-1">
-          {AGE_FILTERS.map(a => (
-            <button key={a} onClick={() => setAgeFilter(a)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
-                ageFilter === a ? 'bg-gray-800 text-white' : 'bg-white text-gray-400 border border-gray-200'
-              }`}>{a}</button>
-          ))}
+      {/* Rank List */}
+      <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0 8px' }}>
+          <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#c5c9ae' }}>전체 랭킹</span>
+          <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, color: '#8A8A9A' }}>4~{rankings.length}위 표시중</span>
         </div>
-        <div className="flex gap-1">
-          {GENDER_FILTERS.map(g => (
-            <button key={g} onClick={() => setGenderFilter(g)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
-                genderFilter === g ? 'bg-gray-800 text-white' : 'bg-white text-gray-400 border border-gray-200'
-              }`}>{g}</button>
-          ))}
-        </div>
-      </div>
 
-      {/* TOP 3 표창 */}
-      {!loading && rankings.length >= 3 && (
-        <div className="px-4 pt-4">
-          <div className="flex items-end justify-center gap-3">
-            {[rankings[1], rankings[0], rankings[2]].map((r, idx) => {
-              const pos = idx === 0 ? 1 : idx === 1 ? 0 : 2;
-              const heights = ['h-20', 'h-28', 'h-16'];
-              const sizes = ['w-12 h-12', 'w-16 h-16', 'w-10 h-10'];
-              const medals = ['🥈', '🥇', '🥉'];
-              return r ? (
-                <div key={r.id} className="flex flex-col items-center gap-1">
-                  <div className={`${sizes[idx]} rounded-full bg-primary flex items-center justify-center text-white font-extrabold text-lg`}>
-                    {r.nickname?.[0]}
-                  </div>
-                  <p className="text-xs font-bold text-gray-700 max-w-[60px] truncate text-center">{r.nickname}</p>
-                  <p className={`text-xs font-black ${mannerColor(r.manner_score)}`}>★{r.manner_score?.toFixed(1)}</p>
-                  <div className={`w-full ${heights[idx]} rounded-t-xl flex items-center justify-center text-2xl ${
-                    pos === 0 ? 'bg-amber-100' : pos === 1 ? 'bg-gray-100' : 'bg-orange-100'
-                  }`}>
-                    {medals[idx]}
-                  </div>
-                </div>
-              ) : null;
-            })}
-          </div>
-        </div>
-      )}
+        {loading && [1,2,3,4].map(i => (
+          <div key={i} style={{ height: 68, background: '#1E1E22', borderRadius: 16, border: '1px solid #2A2A32' }} />
+        ))}
 
-      {/* 랭킹 목록 */}
-      <div className="px-4 pt-3 space-y-2">
-        {loading && (
-          <div className="space-y-2">
-            {[1,2,3,4].map(i => <div key={i} className="h-16 bg-white rounded-2xl border border-gray-100 animate-pulse" />)}
-          </div>
-        )}
         {!loading && rankings.length === 0 && (
-          <div className="text-center pt-12 text-gray-400">아직 랭킹 데이터가 없습니다</div>
+          <div style={{ textAlign: 'center', padding: '48px 0', color: '#8A8A9A' }}>아직 랭킹 데이터가 없습니다</div>
         )}
-        {rankings.map((r, i) => (
-          <div key={r.id} className={`bg-white rounded-2xl border px-4 py-3 flex items-center gap-3 ${
-            i < 3 ? 'border-amber-100' : 'border-gray-100'
-          }`}>
-            <span className="text-xl w-8 text-center font-black text-gray-300">
-              {medal(i) || <span className="text-sm text-gray-400">{i + 1}</span>}
-            </span>
-            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-extrabold">
+
+        {rankings.slice(3).map((r, i) => (
+          <div key={r.id} style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            background: '#1E1E22', border: '1px solid #2A2A32', borderRadius: 16, padding: 12,
+            cursor: 'pointer', transition: 'all 0.2s',
+          }}
+            onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = '#c9f236'; (e.currentTarget as HTMLDivElement).style.transform = 'translateX(2px)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = '#2A2A32'; (e.currentTarget as HTMLDivElement).style.transform = ''; }}
+          >
+            <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 22, color: '#8A8A9A', width: 28, textAlign: 'center' }}>{i + 4}</span>
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#2a2a2b', border: '2px solid #2A2A32', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#e5e2e3', flexShrink: 0 }}>
               {r.nickname?.[0]}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <p className="font-extrabold text-gray-900 truncate">{r.nickname}</p>
-                {r.subscription_status === 'premium' && (
-                  <span className="text-xs">👑</span>
-                )}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3 }}>
+                <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 15, fontWeight: 700, color: '#e5e2e3', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.nickname}</p>
+                {r.subscription_status === 'premium' && <span style={{ fontSize: 12 }}>👑</span>}
               </div>
-              <p className="text-xs text-gray-400">스팟 {r.spotCount}회 · 활동 {r.activityScore}점</p>
+              <p style={{ fontSize: 12, color: '#8A8A9A' }}>스팟 {r.spotCount}회 · 활동 {r.activityScore}점</p>
             </div>
-            <span className={`text-base font-black ${mannerColor(r.manner_score)}`}>★{r.manner_score?.toFixed(1)}</span>
+            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+              <div style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 24, color: '#c9f236', lineHeight: 1 }}>{r.activityScore || Math.round(r.manner_score * 100)}</div>
+              <div style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 10, color: '#8A8A9A', textTransform: 'uppercase', letterSpacing: '0.06em' }}>PTS</div>
+            </div>
           </div>
         ))}
       </div>
 
-      <BottomNav active="ranking" />
+      {/* My Rank Sticky */}
+      <div style={{
+        position: 'fixed', bottom: 68, left: '50%', transform: 'translateX(-50%)',
+        width: '100%', maxWidth: 448, zIndex: 35,
+        background: 'rgba(20,20,22,0.95)', borderTop: '1px solid #c9f236', backdropFilter: 'blur(12px)',
+        padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 12,
+      }}>
+        <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#c9f236' }}>MY RANK</span>
+        <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#1E1E22', border: '2px solid #c9f236', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, color: '#e5e2e3' }}>나</div>
+        <span style={{ flex: 1, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#e5e2e3' }}>내 랭킹</span>
+        <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 20, color: '#c9f236' }}>—</span>
+        <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 10, color: '#8A8A9A', textTransform: 'uppercase' }}>PTS</span>
+      </div>
+
+      {/* Bottom Nav */}
+      <nav style={{
+        position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+        width: '100%', maxWidth: 448, height: 68, zIndex: 50,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-around', padding: '0 8px',
+        background: 'rgba(20,20,22,0.92)', backdropFilter: 'blur(16px)',
+        borderTop: '1px solid #2A2A32', borderRadius: '16px 16px 0 0',
+      }}>
+        {NAV.map(tab => (
+          <Link key={tab.key || tab.href} href={tab.href} style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            gap: 3, color: (tab as any).active ? '#c9f236' : '#8A8A9A',
+            fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 600,
+            textTransform: 'uppercase', letterSpacing: '0.05em',
+            padding: '4px 8px', minWidth: 56, transition: 'color 0.2s',
+            filter: (tab as any).active ? 'drop-shadow(0 0 6px rgba(201,242,54,0.35))' : 'none',
+          }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 24, fontVariationSettings: (tab as any).active ? "'FILL' 1" : "'FILL' 0" }}>{tab.icon}</span>
+            {tab.label}
+          </Link>
+        ))}
+      </nav>
     </div>
   );
 }
-
-function BottomNav({ active }: { active: string }) {
-  const tabs = [
-    { href: '/', key: 'home', label: '스팟', icon: <MapIcon /> },
-    { href: '/benefits', key: 'benefits', label: '혜택', icon: <GiftIcon /> },
-    { href: '/ranking', key: 'ranking', label: '랭킹', icon: <TrophyIcon /> },
-    { href: '/mypage', key: 'mypage', label: '마이', icon: <UserIcon /> },
-  ];
-  return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 flex z-20">
-      {tabs.map(t => (
-        <Link key={t.key} href={t.href} className={`flex-1 flex flex-col items-center py-2.5 transition-colors ${active === t.key ? 'text-primary' : 'text-gray-300'}`}>
-          <div className="w-6 h-6">{t.icon}</div>
-          <span className="text-xs mt-0.5 font-semibold">{t.label}</span>
-        </Link>
-      ))}
-    </nav>
-  );
-}
-function MapIcon() { return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>; }
-function GiftIcon() { return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" /></svg>; }
-function TrophyIcon() { return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>; }
-function UserIcon() { return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>; }

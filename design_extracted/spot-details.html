@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>SPOTFIT — Spot Details</title>
+  <meta name="description" content="스팟 상세 정보를 확인하고 지금 바로 참가하세요."/>
+  <link rel="stylesheet" href="style.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <style>
+    body { overflow-x: hidden; background: #0A0A0B; }
+
+    /* ── Header ── */
+    .detail-header {
+      position: sticky;
+      top: 0; z-index: 40;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 var(--page-margin);
+      height: 64px;
+      background: rgba(10,10,11,0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .detail-header .icon-btn {
+      width: 40px; height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: var(--radius-full);
+      color: var(--color-primary-fixed);
+      transition: background 0.2s, transform 0.15s;
+      cursor: pointer;
+    }
+    .detail-header .icon-btn:hover  { background: var(--color-elevated); }
+    .detail-header .icon-btn:active { transform: scale(0.9); }
+    .detail-header h1 {
+      font-family: var(--font-display);
+      font-size: 22px;
+      color: var(--color-primary-fixed);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    /* ── Hero ── */
+    .hero-img-wrap {
+      position: relative;
+      width: 100%; height: 353px;
+      overflow: hidden;
+    }
+    .hero-img-wrap img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .hero-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(180deg, rgba(10,10,11,0) 0%, rgba(10,10,11,0.78) 68%, rgba(10,10,11,1) 100%);
+    }
+    .hero-content {
+      position: absolute;
+      bottom: 24px; left: var(--page-margin);
+    }
+    .status-tag {
+      display: inline-block;
+      padding: 4px 12px;
+      background: var(--color-primary-container);
+      color: var(--color-on-primary-fixed);
+      font-family: var(--font-headline);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-radius: 2px;
+      margin-bottom: 10px;
+    }
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: 36px;
+      line-height: 1.0;
+      color: #ffffef;
+      text-transform: uppercase;
+    }
+
+    /* ── Host Row ── */
+    .host-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-lg) var(--page-margin);
+    }
+    .host-left { display: flex; align-items: center; gap: var(--space-md); }
+    .host-avatar {
+      width: 36px; height: 36px;
+      border-radius: var(--radius-full);
+      overflow: hidden;
+      border: 1px solid var(--color-border);
+      flex-shrink: 0;
+    }
+    .host-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .host-name {
+      font-family: var(--font-headline);
+      font-size: 14px; font-weight: 700;
+      text-transform: uppercase;
+      color: var(--color-primary-fixed);
+      line-height: 1.2;
+    }
+    .host-sub {
+      font-family: var(--font-headline);
+      font-size: 11px; font-weight: 500;
+      text-transform: uppercase;
+      color: var(--color-text-secondary);
+    }
+    .manner-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .manner-label {
+      font-family: var(--font-headline);
+      font-size: 12px; font-weight: 600;
+      text-transform: uppercase;
+      color: var(--color-primary-fixed);
+      letter-spacing: 0.05em;
+    }
+    .manner-bar {
+      width: 120px; height: 4px;
+      background: var(--color-elevated);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+    }
+    .manner-fill {
+      height: 100%;
+      background: var(--color-success);
+      border-radius: var(--radius-full);
+    }
+
+    /* ── Info Grid ── */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-base);
+      padding: 0 var(--page-margin);
+      margin-bottom: var(--space-lg);
+    }
+    .info-cell {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-base);
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+    }
+    .info-cell .material-symbols-outlined { color: var(--color-primary-fixed); font-size: 22px; flex-shrink: 0; }
+    .info-cell .info-label {
+      font-family: var(--font-headline);
+      font-size: 11px; font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-text-secondary);
+      line-height: 1.2;
+    }
+    .info-cell .info-value {
+      font-family: var(--font-headline);
+      font-size: 15px; font-weight: 700;
+      color: #ffffef;
+      line-height: 1.2;
+    }
+
+    /* ── Tags ── */
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+      padding: 0 var(--page-margin);
+      margin-bottom: var(--space-lg);
+    }
+    .tag-chip {
+      padding: 6px 14px;
+      background: var(--color-elevated);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-full);
+      font-family: var(--font-headline);
+      font-size: 12px; font-weight: 500;
+      color: var(--color-primary-fixed);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Description ── */
+    .detail-section {
+      padding: 0 var(--page-margin);
+      margin-bottom: var(--space-lg);
+    }
+    .detail-section h3 {
+      font-family: var(--font-headline);
+      font-size: 14px; font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #ffffef;
+      margin-bottom: var(--space-sm);
+    }
+    .detail-section p {
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.65;
+      color: var(--color-text-secondary);
+    }
+
+    /* ── Participants ── */
+    .avatar-stack-row {
+      display: flex;
+      align-items: center;
+    }
+    .participant-av {
+      width: 40px; height: 40px;
+      border-radius: var(--radius-full);
+      border: 2px solid #0A0A0B;
+      overflow: hidden;
+      margin-left: -10px;
+    }
+    .participant-av:first-child { margin-left: 0; }
+    .participant-av img { width: 100%; height: 100%; object-fit: cover; }
+    .participant-av.more {
+      background: var(--color-elevated);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-headline);
+      font-size: 12px; font-weight: 600;
+      color: var(--color-text-secondary);
+    }
+
+    /* ── Bottom CTA ── */
+    .bottom-cta {
+      position: fixed;
+      bottom: 0; left: 0;
+      width: 100%;
+      padding: var(--page-margin);
+      background: rgba(10,10,11,0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-top: 1px solid var(--color-border);
+      z-index: 50;
+    }
+    .join-btn {
+      width: 100%; height: 52px;
+      background: var(--color-primary-container);
+      color: var(--color-on-primary-fixed);
+      font-family: var(--font-headline);
+      font-size: 20px; font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      border-radius: var(--radius-xl);
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.15s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+    .join-btn:hover  { box-shadow: 0 0 24px rgba(200,241,53,0.35); }
+    .join-btn:active { transform: scale(0.97); }
+    .join-btn.confirmed {
+      background: var(--color-success);
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header class="detail-header">
+  <button class="icon-btn" onclick="history.back()" aria-label="뒤로 가기">
+    <span class="material-symbols-outlined">arrow_back</span>
+  </button>
+  <h1>SPOT DETAILS</h1>
+  <button class="icon-btn" aria-label="더 보기">
+    <span class="material-symbols-outlined">more_vert</span>
+  </button>
+</header>
+
+<main style="padding-bottom: 100px;">
+
+  <!-- ── Hero ── -->
+  <section class="hero-img-wrap fade-up">
+    <div style="width:100%;height:100%;background:linear-gradient(135deg,#0a1a00,#001a1a,#0a0a0b);display:flex;align-items:center;justify-content:center;font-size:80px;">🏀</div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <span class="status-tag">Recruiting</span>
+      <h2 class="hero-title">Downtown<br/>High-Intensity<br/>Hoops</h2>
+    </div>
+  </section>
+
+  <!-- ── Host Row ── -->
+  <section class="host-row fade-up delay-1">
+    <div class="host-left">
+      <div class="host-avatar">
+        <div style="width:100%;height:100%;background:var(--color-surface-high);display:flex;align-items:center;justify-content:center;font-family:var(--font-headline);font-size:13px;font-weight:700;color:var(--color-primary-fixed);">ED</div>
+      </div>
+      <div>
+        <div class="host-name">EliteDribbler_88</div>
+        <div class="host-sub">Host · Verified Athlete</div>
+      </div>
+    </div>
+    <div class="manner-right">
+      <div class="manner-label">Manner Score 98</div>
+      <div class="manner-bar">
+        <div class="manner-fill" style="width:98%;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Info Grid ── -->
+  <div class="info-grid fade-up delay-2">
+    <div class="info-cell">
+      <span class="material-symbols-outlined">calendar_today</span>
+      <div>
+        <div class="info-label">Date &amp; Time</div>
+        <div class="info-value">Sat, Oct 24 · 18:00</div>
+      </div>
+    </div>
+    <div class="info-cell">
+      <span class="material-symbols-outlined">location_on</span>
+      <div>
+        <div class="info-label">Location</div>
+        <div class="info-value">Underpass Park</div>
+      </div>
+    </div>
+    <div class="info-cell">
+      <span class="material-symbols-outlined">group</span>
+      <div>
+        <div class="info-label">Members</div>
+        <div class="info-value">3 / 8 Joined</div>
+      </div>
+    </div>
+    <div class="info-cell">
+      <span class="material-symbols-outlined">sports_basketball</span>
+      <div>
+        <div class="info-label">Sport</div>
+        <div class="info-value">Basketball</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tags ── -->
+  <div class="tag-row fade-up delay-3">
+    <span class="tag-chip">#BeginnerWelcome</span>
+    <span class="tag-chip">#Competitive</span>
+    <span class="tag-chip">#OutdoorCourt</span>
+  </div>
+
+  <!-- ── Description ── -->
+  <section class="detail-section fade-up delay-3">
+    <h3>Description</h3>
+    <p>Weekly high-intensity scrimmage session. We play full-court 4v4. Focus on fast breaks and disciplined defense. Please bring a dark and a light jersey. First 8 to join are in. No-shows will affect your manner score.</p>
+  </section>
+
+  <!-- ── Participants ── -->
+  <section class="detail-section fade-up delay-4">
+    <h3>Participants</h3>
+    <div class="avatar-stack-row">
+      <div class="participant-av">
+        <div style="width:100%;height:100%;background:linear-gradient(135deg,#1a2200,#0d1a00);display:flex;align-items:center;justify-content:center;font-family:var(--font-headline);font-size:13px;font-weight:700;color:var(--color-primary-fixed);">JY</div>
+      </div>
+      <div class="participant-av">
+        <div style="width:100%;height:100%;background:linear-gradient(135deg,#001a1a,#131314);display:flex;align-items:center;justify-content:center;font-family:var(--font-headline);font-size:13px;font-weight:700;color:var(--color-primary-fixed);">MK</div>
+      </div>
+      <div class="participant-av">
+        <div style="width:100%;height:100%;background:linear-gradient(135deg,#16001a,#131314);display:flex;align-items:center;justify-content:center;font-family:var(--font-headline);font-size:13px;font-weight:700;color:var(--color-primary-fixed);">SH</div>
+      </div>
+      <div class="participant-av more">+5</div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ── Bottom CTA ── -->
+<div class="bottom-cta">
+  <button class="join-btn" id="join-btn" onclick="joinSpot()">
+    JOIN NOW
+  </button>
+</div>
+
+<script>
+  function joinSpot() {
+    const btn = document.getElementById('join-btn');
+    btn.innerHTML = '<span class="material-symbols-outlined" style="animation:spin .8s linear infinite;display:inline-block;">progress_activity</span>';
+    btn.style.pointerEvents = 'none';
+    setTimeout(() => {
+      btn.innerHTML = '✓ CONFIRMED';
+      btn.classList.add('confirmed');
+    }, 1200);
+  }
+
+  // Entrance stagger
+  document.querySelectorAll('section, .info-grid, .tag-row').forEach((el, i) => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(12px)';
+    el.style.transition = `opacity 0.4s ease-out ${i*0.08}s, transform 0.4s ease-out ${i*0.08}s`;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        el.style.opacity = '1';
+        el.style.transform = 'translateY(0)';
+      });
+    });
+  });
+
+  /* spin keyframe */
+  const style = document.createElement('style');
+  style.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+  document.head.appendChild(style);
+</script>
+</body>
+</html>

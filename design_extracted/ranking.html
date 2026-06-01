@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SPOTFIT — Ranking</title>
+  <meta name="description" content="SPOTFIT 최고의 플레이어를 확인하세요. 종목별 랭킹과 시즌 통계를 한눈에."/>
+  <link rel="stylesheet" href="style.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <style>
+    /* ── Podium ── */
+    .podium-section {
+      background: linear-gradient(175deg, #1a2200 0%, var(--color-background) 60%);
+      padding: var(--space-lg) var(--page-margin);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .podium {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: var(--space-md);
+      height: 220px;
+    }
+
+    .podium-slot {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .podium-avatar {
+      position: relative;
+    }
+    .podium-avatar img,
+    .podium-avatar .avatar-placeholder {
+      border-radius: var(--radius-full);
+      object-fit: cover;
+    }
+    .podium-avatar .crown {
+      position: absolute;
+      top: -18px; left: 50%;
+      transform: translateX(-50%);
+      font-size: 20px;
+      line-height: 1;
+    }
+    .podium-avatar .rank-badge {
+      position: absolute;
+      bottom: -4px; right: -4px;
+      width: 22px; height: 22px;
+      border-radius: var(--radius-full);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-headline);
+      font-size: 11px;
+      font-weight: 700;
+      border: 2px solid var(--color-background);
+    }
+
+    .podium-name {
+      font-family: var(--font-headline);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--color-on-background);
+      text-align: center;
+      max-width: 80px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .podium-score {
+      font-family: var(--font-display);
+      font-size: 22px;
+      color: var(--color-primary-fixed);
+      line-height: 1;
+    }
+
+    .podium-bar {
+      width: 80px;
+      border-radius: var(--radius-md) var(--radius-md) 0 0;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: var(--space-sm);
+      font-family: var(--font-display);
+      font-size: 28px;
+      color: var(--color-on-primary-fixed);
+    }
+    /* 1st place */
+    .podium-slot.first .podium-bar  { background: var(--color-primary-container); height: 100px; }
+    .podium-slot.first .podium-avatar .rank-badge { background: var(--color-primary-fixed); color: var(--color-on-primary-fixed); }
+    .podium-slot.first .avatar-placeholder { width: 64px; height: 64px; border: 3px solid var(--color-primary-fixed); }
+    /* 2nd place */
+    .podium-slot.second .podium-bar { background: var(--color-surface-high); height: 72px; }
+    .podium-slot.second .rank-badge { background: #C0C0C0; color: #111; }
+    .podium-slot.second .avatar-placeholder { width: 52px; height: 52px; border: 2px solid #C0C0C0; }
+    /* 3rd place */
+    .podium-slot.third .podium-bar  { background: var(--color-surface-high); height: 50px; }
+    .podium-slot.third .rank-badge  { background: #CD7F32; color: #fff; }
+    .podium-slot.third .avatar-placeholder { width: 48px; height: 48px; border: 2px solid #CD7F32; }
+
+    .avatar-placeholder {
+      background: var(--color-elevated);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-headline);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--color-on-background);
+    }
+
+    /* ── Filter tabs ── */
+    .tab-bar {
+      display: flex;
+      border-bottom: 1px solid var(--color-border);
+      background: var(--color-surface);
+      position: sticky;
+      top: 64px;
+      z-index: 30;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 12px 0;
+      font-family: var(--font-headline);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-text-secondary);
+      border-bottom: 2px solid transparent;
+      transition: color 0.2s, border-color 0.2s;
+      cursor: pointer;
+    }
+    .tab-btn:hover { color: var(--color-on-background); }
+    .tab-btn.active {
+      color: var(--color-primary-fixed);
+      border-bottom-color: var(--color-primary-fixed);
+    }
+
+    /* ── Sport filter ── */
+    .sport-tabs {
+      display: flex;
+      gap: var(--space-sm);
+      overflow-x: auto;
+      padding: var(--space-md) var(--page-margin);
+    }
+
+    /* ── Rank List Row ── */
+    .rank-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      background: var(--color-elevated);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      padding: var(--space-md);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .rank-row:hover { border-color: var(--color-primary-fixed); transform: translateX(2px); }
+    .rank-row:active { transform: scale(0.98); }
+
+    .rank-num {
+      font-family: var(--font-display);
+      font-size: 22px;
+      color: var(--color-text-secondary);
+      width: 28px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .rank-num.top3 { color: var(--color-primary-fixed); }
+
+    .rank-av {
+      width: 44px; height: 44px;
+      border-radius: var(--radius-full);
+      background: var(--color-surface-high);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-headline);
+      font-size: 14px;
+      font-weight: 700;
+      border: 2px solid var(--color-border);
+      flex-shrink: 0;
+    }
+    .rank-av.top1 { border-color: var(--color-primary-fixed); }
+
+    .rank-info { flex: 1; min-width: 0; }
+    .rank-info .name {
+      font-family: var(--font-headline);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--color-on-background);
+      margin-bottom: 3px;
+    }
+    .rank-info .sub {
+      font-size: 12px;
+      color: var(--color-text-secondary);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .rank-info .sub .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--color-border); }
+
+    .rank-score {
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .rank-score .pts {
+      font-family: var(--font-display);
+      font-size: 24px;
+      color: var(--color-primary-fixed);
+      line-height: 1;
+    }
+    .rank-score .pts-label {
+      font-family: var(--font-headline);
+      font-size: 10px;
+      color: var(--color-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    /* ── Change indicator ── */
+    .change-up   { color: var(--color-success); font-size: 11px; }
+    .change-down { color: var(--color-danger);  font-size: 11px; }
+    .change-same { color: var(--color-text-disabled); font-size: 11px; }
+
+    /* ── My rank sticky ── */
+    .my-rank-bar {
+      position: fixed;
+      bottom: var(--nav-bottom-h);
+      left: 0; right: 0;
+      z-index: 35;
+      background: rgba(20,20,22,0.95);
+      border-top: 1px solid var(--color-primary-fixed);
+      backdrop-filter: blur(12px);
+      padding: var(--space-sm) var(--page-margin);
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+    }
+    .my-rank-bar .label {
+      font-family: var(--font-headline);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--color-primary-fixed);
+    }
+    .my-rank-bar .me { flex:1; font-family:var(--font-headline); font-size:14px; font-weight:700; color:var(--color-on-background); }
+    .my-rank-bar .my-pts { font-family:var(--font-display); font-size:20px; color:var(--color-primary-fixed); }
+  </style>
+</head>
+<body>
+
+<!-- ── Top Nav ── -->
+<header class="top-nav">
+  <span class="logo">RANKING</span>
+  <div class="nav-actions">
+    <button class="icon-btn" aria-label="시즌 정보">
+      <span class="material-symbols-outlined">emoji_events</span>
+    </button>
+  </div>
+</header>
+
+<!-- ── Season Banner ── -->
+<div style="background:linear-gradient(90deg,#1a2200,#0d1a00);border-bottom:1px solid var(--color-border);padding:10px var(--page-margin);display:flex;align-items:center;justify-content:space-between;">
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span class="material-symbols-outlined icon-fill" style="color:var(--color-primary-fixed);font-size:18px;">trophy</span>
+    <span style="font-family:var(--font-headline);font-size:13px;font-weight:700;color:var(--color-primary-fixed);text-transform:uppercase;letter-spacing:.06em;">Season 3 · 2026</span>
+  </div>
+  <span style="font-family:var(--font-headline);font-size:12px;color:var(--color-text-secondary);">12일 남음</span>
+</div>
+
+<!-- ── Podium (Top 3) ── -->
+<section class="podium-section fade-up">
+  <h2 class="section-title" style="text-align:center;margin-bottom:var(--space-lg);">🏆 TOP 3 PLAYERS</h2>
+  <div class="podium">
+
+    <!-- 2nd -->
+    <div class="podium-slot second fade-up delay-1">
+      <div class="podium-avatar">
+        <div class="avatar-placeholder" style="width:52px;height:52px;border-radius:50%;border:2px solid #C0C0C0;">MK</div>
+        <div class="rank-badge">2</div>
+      </div>
+      <div class="podium-name">Min-Kyu</div>
+      <div class="podium-score">3,820</div>
+      <div class="podium-bar">2</div>
+    </div>
+
+    <!-- 1st -->
+    <div class="podium-slot first fade-up">
+      <div class="podium-avatar">
+        <div class="crown">👑</div>
+        <div class="avatar-placeholder" style="width:64px;height:64px;border-radius:50%;border:3px solid var(--color-primary-fixed);">JY</div>
+        <div class="rank-badge">1</div>
+      </div>
+      <div class="podium-name" style="color:var(--color-primary-fixed);">Ji-Yeon</div>
+      <div class="podium-score" style="font-size:28px;">4,210</div>
+      <div class="podium-bar">1</div>
+    </div>
+
+    <!-- 3rd -->
+    <div class="podium-slot third fade-up delay-2">
+      <div class="podium-avatar">
+        <div class="avatar-placeholder" style="width:48px;height:48px;border-radius:50%;border:2px solid #CD7F32;">SH</div>
+        <div class="rank-badge">3</div>
+      </div>
+      <div class="podium-name">Seo-Hyun</div>
+      <div class="podium-score" style="font-size:18px;">3,540</div>
+      <div class="podium-bar">3</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── Tab Bar ── -->
+<div class="tab-bar" role="tablist">
+  <button class="tab-btn active" onclick="switchTab(this,'all')" role="tab" aria-selected="true" id="tab-all">전체</button>
+  <button class="tab-btn" onclick="switchTab(this,'sport')" role="tab" aria-selected="false" id="tab-sport">종목별</button>
+  <button class="tab-btn" onclick="switchTab(this,'weekly')" role="tab" aria-selected="false" id="tab-weekly">이번 주</button>
+  <button class="tab-btn" onclick="switchTab(this,'nearby')" role="tab" aria-selected="false" id="tab-nearby">내 주변</button>
+</div>
+
+<!-- ── Sport Filter ── -->
+<nav class="sport-tabs no-scrollbar" id="sport-filter" aria-label="종목 선택">
+  <button class="filter-chip on" onclick="toggleChip(this)">ALL</button>
+  <button class="filter-chip" onclick="toggleChip(this)">
+    <span class="material-symbols-outlined" style="font-size:14px;">sports_basketball</span>Hoops
+  </button>
+  <button class="filter-chip" onclick="toggleChip(this)">
+    <span class="material-symbols-outlined" style="font-size:14px;">sports_soccer</span>Soccer
+  </button>
+  <button class="filter-chip" onclick="toggleChip(this)">
+    <span class="material-symbols-outlined" style="font-size:14px;">fitness_center</span>Gym
+  </button>
+  <button class="filter-chip" onclick="toggleChip(this)">
+    <span class="material-symbols-outlined" style="font-size:14px;">sports_tennis</span>Tennis
+  </button>
+</nav>
+
+<!-- ── Rank List ── -->
+<div style="padding:0 var(--page-margin);display:flex;flex-direction:column;gap:var(--space-sm);padding-bottom:calc(var(--nav-bottom-h) + 68px);" id="rank-list">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0 8px;">
+    <span class="section-title">전체 랭킹</span>
+    <span style="font-family:var(--font-headline);font-size:11px;color:var(--color-text-secondary);">4~20위 표시중</span>
+  </div>
+
+  <!-- Rows -->
+  <div class="rank-row fade-up" id="rrow-4">
+    <div class="rank-num">4</div>
+    <div class="rank-av">DJ</div>
+    <div class="rank-info">
+      <div class="name">Dong-Jun Lee</div>
+      <div class="sub">
+        <span>Hoops</span><span class="dot"></span><span>23 spots</span>
+        <span class="change-up">▲ 2</span>
+      </div>
+    </div>
+    <div class="rank-score">
+      <div class="pts">3,320</div>
+      <div class="pts-label">PTS</div>
+    </div>
+  </div>
+
+  <div class="rank-row fade-up delay-1" id="rrow-5">
+    <div class="rank-num">5</div>
+    <div class="rank-av">YJ</div>
+    <div class="rank-info">
+      <div class="name">Ye-Jin Park</div>
+      <div class="sub">
+        <span>Soccer</span><span class="dot"></span><span>19 spots</span>
+        <span class="change-down">▼ 1</span>
+      </div>
+    </div>
+    <div class="rank-score">
+      <div class="pts">3,110</div>
+      <div class="pts-label">PTS</div>
+    </div>
+  </div>
+
+  <div class="rank-row fade-up delay-2">
+    <div class="rank-num">6</div>
+    <div class="rank-av">HW</div>
+    <div class="rank-info">
+      <div class="name">Hyun-Woo Kim</div>
+      <div class="sub">
+        <span>Gym</span><span class="dot"></span><span>31 spots</span>
+        <span class="change-same">— 0</span>
+      </div>
+    </div>
+    <div class="rank-score">
+      <div class="pts">2,980</div>
+      <div class="pts-label">PTS</div>
+    </div>
+  </div>
+
+  <div class="rank-row fade-up delay-3">
+    <div class="rank-num">7</div>
+    <div class="rank-av">SR</div>
+    <div class="rank-info">
+      <div class="name">Su-Rin Choi</div>
+      <div class="sub">
+        <span>Tennis</span><span class="dot"></span><span>15 spots</span>
+        <span class="change-up">▲ 3</span>
+      </div>
+    </div>
+    <div class="rank-score">
+      <div class="pts">2,760</div>
+      <div class="pts-label">PTS</div>
+    </div>
+  </div>
+
+  <div class="rank-row fade-up delay-4">
+    <div class="rank-num">8</div>
+    <div class="rank-av">BH</div>
+    <div class="rank-info">
+      <div class="name">Bo-Hyun Jung</div>
+      <div class="sub">
+        <span>Swim</span><span class="dot"></span><span>28 spots</span>
+        <span class="change-up">▲ 5</span>
+      </div>
+    </div>
+    <div class="rank-score">
+      <div class="pts">2,640</div>
+      <div class="pts-label">PTS</div>
+    </div>
+  </div>
+
+  <div class="rank-row fade-up delay-5">
+    <div class="rank-num">9</div>
+    <div class="rank-av">JH</div>
+    <div class="rank-info">
+      <div class="name">Ji-Ho Shin</div>
+      <div class="sub">
+        <span>Hoops</span><span class="dot"></span><span>17 spots</span>
+        <span class="change-down">▼ 2</span>
+      </div>
+    </div>
+    <div class="rank-score">
+      <div class="pts">2,480</div>
+      <div class="pts-label">PTS</div>
+    </div>
+  </div>
+
+  <div class="rank-row fade-up delay-5">
+    <div class="rank-num">10</div>
+    <div class="rank-av">EY</div>
+    <div class="rank-info">
+      <div class="name">Eun-Young Oh</div>
+      <div class="sub">
+        <span>Soccer</span><span class="dot"></span><span>12 spots</span>
+        <span class="change-same">— 0</span>
+      </div>
+    </div>
+    <div class="rank-score">
+      <div class="pts">2,310</div>
+      <div class="pts-label">PTS</div>
+    </div>
+  </div>
+
+  <!-- More rows hint -->
+  <div style="text-align:center;padding:var(--space-md) 0;">
+    <button style="font-family:var(--font-headline);font-size:13px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.06em;border:1px solid var(--color-border);border-radius:var(--radius-full);padding:8px 24px;background:var(--color-elevated);transition:all .2s;" onmouseover="this.style.borderColor='var(--color-primary-fixed)'" onmouseout="this.style.borderColor='var(--color-border)'">
+      더 보기
+    </button>
+  </div>
+
+</div>
+
+<!-- ── My Rank Sticky Bar ── -->
+<div class="my-rank-bar">
+  <span class="label">#42</span>
+  <div style="width:36px;height:36px;border-radius:50%;background:var(--color-surface-high);display:flex;align-items:center;justify-content:center;border:2px solid var(--color-primary-fixed);font-family:var(--font-headline);font-size:12px;font-weight:700;">나</div>
+  <div class="me">내 랭킹</div>
+  <div class="my-pts">870</div>
+  <span style="font-family:var(--font-headline);font-size:10px;color:var(--color-text-secondary);text-transform:uppercase;">PTS</span>
+</div>
+
+<!-- ── Bottom Nav ── -->
+<nav class="bottom-nav" aria-label="메인 네비게이션">
+  <a href="index.html" id="nav-home">
+    <span class="material-symbols-outlined">home</span>Home
+  </a>
+  <a href="explore.html" id="nav-explore">
+    <span class="material-symbols-outlined">map</span>Explore
+  </a>
+  <a href="explore.html#create" id="nav-host">
+    <span class="material-symbols-outlined">add_box</span>Host
+  </a>
+  <a href="ranking.html" class="active" id="nav-ranking">
+    <span class="material-symbols-outlined icon-fill">leaderboard</span>Ranks
+  </a>
+  <a href="benefits.html" id="nav-benefits">
+    <span class="material-symbols-outlined">local_offer</span>혜택
+  </a>
+</nav>
+
+<script>
+  function switchTab(el, tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-selected','false');
+    });
+    el.classList.add('active');
+    el.setAttribute('aria-selected','true');
+  }
+
+  function toggleChip(el) {
+    document.querySelectorAll('#sport-filter .filter-chip').forEach(c => c.classList.remove('on'));
+    el.classList.add('on');
+  }
+</script>
+</body>
+</html>

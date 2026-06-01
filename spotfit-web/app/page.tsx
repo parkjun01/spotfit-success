@@ -15,31 +15,15 @@ interface Spot {
   host_nickname: string; host_manner_score: number; distance_meters?: number;
   difficulty_level: string;
 }
-
-interface Region {
-  name: string;
-  lat: number;
-  lng: number;
-}
+interface Region { name: string; lat: number; lng: number; }
 
 const DIFFICULTY: Record<string, string> = { beginner: '초급', intermediate: '중급', advanced: '고급' };
-
-const SPORT_COLORS: Record<string, string> = {
-  '축구': '#16A34A', '풋살': '#22C55E', '농구': '#EA580C', '야구': '#2563EB',
-  '배드민턴': '#9333EA', '테니스': '#CA8A04', '탁구': '#0891B2', '수영': '#06B6D4',
-  '러닝': '#DC2626', '등산': '#78350F', '클라이밍': '#C2410C', '요가': '#DB2777',
-  '필라테스': '#EC4899', '헬스': '#475569', '골프': '#15803D', '볼링': '#7C3AED',
-  '배구': '#D97706', '핸드볼': '#0D9488',
-};
-const getSportColor = (name: string) => SPORT_COLORS[name] || '#F97316';
-
 const SPORT_EMOJIS: Record<string, string> = {
   '축구': '⚽', '풋살': '⚽', '농구': '🏀', '야구': '⚾', '배드민턴': '🏸',
   '테니스': '🎾', '탁구': '🏓', '수영': '🏊', '러닝': '🏃', '등산': '🧗',
   '클라이밍': '🧗', '요가': '🧘', '필라테스': '🤸', '헬스': '💪', '골프': '⛳',
   '볼링': '🎳', '배구': '🏐', '핸드볼': '🤾',
 };
-
 const RADIUS_OPTIONS = [
   { label: '500m', value: 500 },
   { label: '1km', value: 1000 },
@@ -48,26 +32,19 @@ const RADIUS_OPTIONS = [
   { label: '10km', value: 10000 },
 ];
 
-function saveRegion(region: Region) {
+function saveRegion(r: Region) {
   try {
     const recent: Region[] = JSON.parse(localStorage.getItem('recent_regions') || '[]');
-    const filtered = recent.filter(r => r.name !== region.name).slice(0, 4);
-    localStorage.setItem('recent_regions', JSON.stringify([region, ...filtered]));
-    localStorage.setItem('selected_region', JSON.stringify(region));
+    const filtered = recent.filter(x => x.name !== r.name).slice(0, 4);
+    localStorage.setItem('recent_regions', JSON.stringify([r, ...filtered]));
+    localStorage.setItem('selected_region', JSON.stringify(r));
   } catch {}
 }
-
 function loadRegion(): Region | null {
-  try {
-    const s = localStorage.getItem('selected_region');
-    return s ? JSON.parse(s) : null;
-  } catch { return null; }
+  try { const s = localStorage.getItem('selected_region'); return s ? JSON.parse(s) : null; } catch { return null; }
 }
-
 function loadRecentRegions(): Region[] {
-  try {
-    return JSON.parse(localStorage.getItem('recent_regions') || '[]');
-  } catch { return []; }
+  try { return JSON.parse(localStorage.getItem('recent_regions') || '[]'); } catch { return []; }
 }
 
 export default function HomePage() {
@@ -88,42 +65,31 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!localStorage.getItem('access_token') && !sessionStorage.getItem('access_token')) {
-      router.push('/login');
-      return;
+      router.push('/login'); return;
     }
     fetch('/api/sports').then(r => r.json()).then(d => setSports(d.data || []));
     setRecentRegions(loadRecentRegions());
-
     const saved = loadRegion();
-    if (saved) {
-      setRegion(saved);
-    } else {
-      // 저장된 동네 없으면 GPS 또는 홈 위치로
-      try {
-        const stored = localStorage.getItem('user') || sessionStorage.getItem('user');
-        if (stored) {
-          const u = JSON.parse(stored);
-          if (u.homeLat && u.homeLng) {
-            reverseGeocode(u.homeLat, u.homeLng).then(name => {
-              setRegion({ name, lat: u.homeLat, lng: u.homeLng });
-            });
-            return;
-          }
+    if (saved) { setRegion(saved); return; }
+    try {
+      const stored = localStorage.getItem('user') || sessionStorage.getItem('user');
+      if (stored) {
+        const u = JSON.parse(stored);
+        if (u.homeLat && u.homeLng) {
+          reverseGeocode(u.homeLat, u.homeLng).then(name => setRegion({ name, lat: u.homeLat, lng: u.homeLng }));
+          return;
         }
-      } catch {}
-      navigator.geolocation?.getCurrentPosition(
-        pos => {
-          const { latitude: lat, longitude: lng } = pos.coords;
-          reverseGeocode(lat, lng).then(name => setRegion({ name, lat, lng }));
-        },
-        () => setRegion({ name: '서울 중구', lat: 37.5665, lng: 126.978 })
-      );
-    }
+      }
+    } catch {}
+    navigator.geolocation?.getCurrentPosition(
+      pos => reverseGeocode(pos.coords.latitude, pos.coords.longitude).then(name =>
+        setRegion({ name, lat: pos.coords.latitude, lng: pos.coords.longitude })
+      ),
+      () => setRegion({ name: '서울 중구', lat: 37.5665, lng: 126.978 })
+    );
   }, []);
 
-  useEffect(() => {
-    if (region) loadSpots();
-  }, [region, selectedSport, radius]);
+  useEffect(() => { if (region) loadSpots(); }, [region, selectedSport, radius]);
 
   const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
     try {
@@ -138,8 +104,7 @@ export default function HomePage() {
     setLoading(true);
     try {
       const params = new URLSearchParams({
-        lat: String(region.lat), lng: String(region.lng),
-        radius: String(radius),
+        lat: String(region.lat), lng: String(region.lng), radius: String(radius),
         ...(selectedSport && { sportId: selectedSport }),
       });
       const res = await fetch(`/api/spots?${params}`);
@@ -157,192 +122,181 @@ export default function HomePage() {
       try {
         const res = await fetch(`/api/geocode?address=${encodeURIComponent(q)}`);
         const data = await res.json();
-        if (data.success) {
-          setSearchResults([{ name: q, lat: data.data.lat, lng: data.data.lng }]);
-        } else {
-          setSearchResults([]);
-        }
+        if (data.success) setSearchResults([{ name: q, lat: data.data.lat, lng: data.data.lng }]);
+        else setSearchResults([]);
       } finally { setSearching(false); }
     }, 600);
   };
 
   const selectRegion = (r: Region) => {
-    setRegion(r);
-    saveRegion(r);
-    setRecentRegions(loadRecentRegions());
-    setShowRegionSheet(false);
-    setSearchQuery('');
-    setSearchResults([]);
+    setRegion(r); saveRegion(r); setRecentRegions(loadRecentRegions());
+    setShowRegionSheet(false); setSearchQuery(''); setSearchResults([]);
   };
-
   const useCurrentLocation = () => {
     navigator.geolocation?.getCurrentPosition(
-      pos => {
-        const { latitude: lat, longitude: lng } = pos.coords;
-        reverseGeocode(lat, lng).then(name => selectRegion({ name, lat, lng }));
-      },
+      pos => reverseGeocode(pos.coords.latitude, pos.coords.longitude).then(name =>
+        selectRegion({ name, lat: pos.coords.latitude, lng: pos.coords.longitude })
+      ),
       () => alert('위치 권한을 허용해주세요')
     );
   };
 
   return (
-    <div className="flex flex-col h-screen bg-white">
+    <div className="flex flex-col h-screen" style={{ background: '#131314' }}>
 
-      {/* 헤더 */}
-      <header className="bg-white px-4 pt-4 pb-2 sticky top-0 z-20 border-b border-gray-100">
-        <div className="flex items-center justify-between mb-3">
-          {/* 동네 선택 버튼 (당근 스타일) */}
+      {/* Top Nav */}
+      <header style={{
+        position: 'sticky', top: 0, zIndex: 40, height: 64,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 16px',
+        background: 'rgba(19,19,20,0.95)', backdropFilter: 'blur(12px)',
+        borderBottom: '1px solid #2A2A32',
+      }}>
+        <button onClick={() => setShowRegionSheet(true)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 24, color: '#c9f236', letterSpacing: '0.05em' }}>
+            {region?.name || 'SPOTFIT'}
+          </span>
+          <span className="material-symbols-outlined" style={{ color: '#8A8A9A', fontSize: 20 }}>expand_more</span>
+        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
-            onClick={() => setShowRegionSheet(true)}
-            className="flex items-center gap-1.5 group"
+            onClick={() => setViewMode(v => v === 'list' ? 'map' : 'list')}
+            style={{ width: 36, height: 36, borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c9f236', background: 'rgba(201,242,54,0.1)' }}
           >
-            <span className="text-xl font-black text-gray-900">
-              {region?.name || '동네 선택'}
+            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+              {viewMode === 'list' ? 'map' : 'format_list_bulleted'}
             </span>
-            <svg className="w-5 h-5 text-gray-500 group-hover:text-primary transition-colors mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
           </button>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setViewMode(v => v === 'list' ? 'map' : 'list')}
-              className="flex items-center gap-1.5 bg-gray-100 rounded-xl px-3 py-2 text-sm font-semibold text-gray-600"
-            >
-              {viewMode === 'list' ? <><MapIcon className="w-4 h-4" />지도</> : <><ListIcon className="w-4 h-4" />목록</>}
-            </button>
-            <Link href="/mypage" className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
-              <UserIcon className="w-5 h-5 text-gray-600" />
-            </Link>
-          </div>
-        </div>
-
-        {/* 반경 선택 */}
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
-          {RADIUS_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => setRadius(opt.value)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
-                radius === opt.value ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-          <div className="w-px bg-gray-200 mx-1 flex-shrink-0" />
-          {/* 종목 필터 */}
-          {[{ id: '', name: '전체' }, ...sports.slice(0, 8)].map(s => (
-            <button
-              key={s.id}
-              onClick={() => setSelectedSport(s.id)}
-              className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
-                selectedSport === s.id ? 'bg-primary text-white' : 'bg-gray-100 text-gray-500'
-              }`}
-            >
-              {s.id && SPORT_EMOJIS[s.name] ? `${SPORT_EMOJIS[s.name]} ` : ''}{s.name}
-            </button>
-          ))}
+          <Link href="/mypage" style={{ width: 34, height: 34, borderRadius: '50%', overflow: 'hidden', border: '2px solid #2A2A32', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1E1E22' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 20, color: '#8A8A9A' }}>person</span>
+          </Link>
         </div>
       </header>
 
-      {/* 콘텐츠 */}
+      {/* Hero + filters */}
+      {viewMode === 'list' && (
+        <div style={{ background: 'linear-gradient(160deg,#1a1f00 0%,#131314 55%)', padding: '28px 16px 20px', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
+          <div style={{ position: 'absolute', top: -40, right: -40, width: 220, height: 220, background: 'radial-gradient(circle,rgba(200,241,53,0.15) 0%,transparent 70%)', pointerEvents: 'none' }} />
+          <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#c5c9ae', marginBottom: 6 }}>서울 · 오늘</p>
+          <h1 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 44, lineHeight: 0.95, color: '#c9f236', textTransform: 'uppercase', letterSpacing: '0.02em', marginBottom: 10 }}>
+            FIND<br/><span style={{ color: '#e5e2e3' }}>YOUR</span><br/>SPOT
+          </h1>
+
+          {/* Radius pills */}
+          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, marginTop: 14 }} className="no-scrollbar">
+            {RADIUS_OPTIONS.map(opt => (
+              <button key={opt.value} onClick={() => setRadius(opt.value)} style={{
+                flexShrink: 0, padding: '6px 14px', borderRadius: 999,
+                fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, textTransform: 'uppercase',
+                background: radius === opt.value ? '#c9f236' : '#1E1E22',
+                color: radius === opt.value ? '#171e00' : '#8A8A9A',
+                border: `1px solid ${radius === opt.value ? '#c9f236' : '#2A2A32'}`,
+                transition: 'all 0.2s',
+              }}>{opt.label}</button>
+            ))}
+            <div style={{ width: 1, background: '#2A2A32', flexShrink: 0, margin: '0 4px' }} />
+            {[{ id: '', name: '전체' }, ...sports.slice(0, 6)].map(s => (
+              <button key={s.id} onClick={() => setSelectedSport(s.id)} style={{
+                flexShrink: 0, padding: '6px 14px', borderRadius: 999,
+                fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700,
+                background: selectedSport === s.id ? '#c9f236' : '#1E1E22',
+                color: selectedSport === s.id ? '#171e00' : '#8A8A9A',
+                border: `1px solid ${selectedSport === s.id ? '#c9f236' : '#2A2A32'}`,
+                transition: 'all 0.2s',
+              }}>
+                {s.id && SPORT_EMOJIS[s.name] ? `${SPORT_EMOJIS[s.name]} ` : ''}{s.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Content */}
       <main className="flex-1 overflow-hidden relative">
         {viewMode === 'map' ? (
-          <SpotMap spots={spots} userLocation={region ? { lat: region.lat, lng: region.lng } : { lat: 37.5665, lng: 126.978 }} />
+          <SpotMap spots={spots} center={region ? { lat: region.lat, lng: region.lng } : undefined} />
         ) : (
           <div className="h-full overflow-y-auto">
-            <div className="px-4 pt-3 pb-1">
-              <span className="text-xs font-semibold text-gray-400">
-                {loading ? '로딩 중...' : `${region?.name || ''} 스팟 ${spots.length}개`}
+            <div style={{ padding: '12px 16px 4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#8A8A9A' }}>
+                {loading ? '로딩 중...' : `🔥 Hot Spots · ${spots.length}개`}
               </span>
             </div>
 
-            <div className="px-4 pb-24 space-y-3 pt-1">
-              {loading && (
-                <div className="space-y-3 pt-2">
-                  {[1, 2, 3].map(i => (
-                    <div key={i} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-                      <div className="h-1 bg-gray-100" />
-                      <div className="p-4 space-y-2">
-                        <div className="h-3 bg-gray-100 rounded-full w-1/3 animate-pulse" />
-                        <div className="h-5 bg-gray-100 rounded-full w-3/4 animate-pulse" />
-                        <div className="h-3 bg-gray-100 rounded-full w-1/2 animate-pulse" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+            <div style={{ padding: '0 16px 96px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {loading && [1,2,3].map(i => (
+                <div key={i} style={{ background: '#1E1E22', border: '1px solid #2A2A32', borderRadius: 16, height: 160, animation: 'pulse 1.5s infinite' }} />
+              ))}
 
               {!loading && spots.length === 0 && (
-                <div className="text-center pt-20 space-y-3">
-                  <p className="text-5xl">🏟</p>
-                  <p className="font-extrabold text-gray-800">{region?.name}에 스팟이 없어요</p>
-                  <p className="text-sm text-gray-400">첫 번째 스팟을 만들어보세요!</p>
-                  <Link href="/spots/new" className="inline-block btn-primary text-sm mt-2">스팟 만들기</Link>
+                <div style={{ textAlign: 'center', padding: '80px 0' }}>
+                  <p style={{ fontSize: 48 }}>🏟</p>
+                  <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 20, fontWeight: 700, color: '#e5e2e3', marginTop: 12 }}>{region?.name}에 스팟이 없어요</p>
+                  <p style={{ fontSize: 14, color: '#8A8A9A', marginTop: 6 }}>첫 번째 스팟을 만들어보세요!</p>
+                  <Link href="/spots/new" style={{ display: 'inline-block', marginTop: 16, padding: '10px 24px', background: '#c9f236', color: '#171e00', borderRadius: 8, fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, fontSize: 14, textTransform: 'uppercase' }}>
+                    스팟 만들기
+                  </Link>
                 </div>
               )}
 
               {spots.map(spot => {
-                const color = getSportColor(spot.sport_name);
                 const isFull = spot.status === 'full';
-                const barColor = isFull ? '#94A3B8' : color;
                 const fillPct = Math.min(100, Math.round((spot.current_participants / spot.max_participants) * 100));
-
                 return (
                   <Link key={spot.id} href={`/spots/${spot.id}`}>
-                    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden active:scale-[0.98] transition-transform shadow-sm">
-                      <div className="h-1" style={{ background: barColor }} />
-                      <div className="p-4">
-                        <div className="flex items-center gap-1.5 mb-2.5 flex-wrap">
-                          <span className="text-xs font-bold px-2.5 py-1 rounded-full text-white" style={{ background: barColor }}>
-                            {SPORT_EMOJIS[spot.sport_name] || '🏅'} {spot.sport_name}
-                          </span>
-                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${isFull ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-700'}`}>
+                    <div style={{
+                      background: '#1E1E22', border: '1px solid #2A2A32', borderRadius: 16,
+                      overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s',
+                    }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 12px 40px rgba(0,0,0,0.5)'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = ''; (e.currentTarget as HTMLDivElement).style.boxShadow = ''; }}
+                    >
+                      {/* emoji placeholder */}
+                      <div style={{ height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48, background: 'linear-gradient(135deg,#1a2200,#0d1a00)' }}>
+                        {SPORT_EMOJIS[spot.sport_name] || '🏅'}
+                      </div>
+                      <div style={{ padding: 14 }}>
+                        <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' as const }}>
+                          <span style={{ padding: '3px 10px', borderRadius: 999, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', background: isFull ? '#3E3E4A' : '#c9f236', color: isFull ? '#8A8A9A' : '#171e00' }}>
                             {isFull ? '마감' : '모집중'}
                           </span>
-                          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-500">
+                          <span style={{ padding: '3px 10px', borderRadius: 999, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 600, background: '#2a2a2b', color: '#8A8A9A', border: '1px solid #2A2A32', textTransform: 'uppercase' }}>
+                            {spot.sport_name}
+                          </span>
+                          <span style={{ padding: '3px 10px', borderRadius: 999, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 600, background: '#2a2a2b', color: '#8A8A9A', border: '1px solid #2A2A32' }}>
                             {DIFFICULTY[spot.difficulty_level]}
                           </span>
                           {spot.distance_meters != null && (
-                            <span className="ml-auto text-xs text-gray-400 font-semibold">
+                            <span style={{ marginLeft: 'auto', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, color: '#8A8A9A', fontWeight: 600 }}>
                               {(spot.distance_meters / 1000).toFixed(1)}km
                             </span>
                           )}
                         </div>
-
-                        <p className="font-extrabold text-gray-900 text-[15px] leading-snug mb-2.5 line-clamp-2">{spot.title}</p>
-
-                        <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
-                          <span className="flex items-center gap-1 min-w-0">
-                            <span className="flex-shrink-0">📍</span>
-                            <span className="truncate">{spot.location_name}</span>
+                        <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 17, fontWeight: 700, color: '#ffffef', marginBottom: 8, lineHeight: 1.25 }}>
+                          {spot.title}
+                        </p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 13, color: '#8A8A9A', marginBottom: 10 }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 15 }}>location_on</span>
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 150 }}>{spot.location_name}</span>
                           </span>
-                          <span className="flex items-center gap-1 flex-shrink-0">
-                            <span>🕐</span>
-                            <span>{format(new Date(spot.starts_at), 'M/d HH:mm')}</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 15 }}>schedule</span>
+                            {format(new Date(spot.starts_at), 'M/d HH:mm')}
                           </span>
                         </div>
-
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-1">
-                              <div className="h-full rounded-full" style={{ width: `${fillPct}%`, background: barColor }} />
-                            </div>
-                            <p className="text-xs font-bold text-gray-600">
-                              <span style={{ color: barColor }}>{spot.current_participants}</span>
-                              <span className="text-gray-400">/{spot.max_participants}명</span>
-                              <span className="text-gray-400 font-normal ml-1.5">
-                                · {formatDistanceToNow(new Date(spot.starts_at), { addSuffix: true, locale: ko })}
-                              </span>
-                            </p>
+                        <div style={{ borderTop: '1px solid #2A2A32', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 15, fontWeight: 700, color: '#c9f236' }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 18, fontVariationSettings: "'FILL' 1" }}>group</span>
+                            {spot.current_participants}/{spot.max_participants}
                           </div>
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <div className="w-6 h-6 rounded-full text-white text-xs font-extrabold flex items-center justify-center" style={{ background: barColor }}>
-                              {spot.host_nickname?.[0]}
-                            </div>
-                            <span className="text-xs font-bold text-amber-500">★{spot.host_manner_score?.toFixed(1)}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, color: '#c9f236' }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 15, fontVariationSettings: "'FILL' 1" }}>star</span>
+                            {spot.host_manner_score?.toFixed(1)}
                           </div>
+                        </div>
+                        <div style={{ marginTop: 8, height: 3, background: '#2A2A32', borderRadius: 999, overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${fillPct}%`, background: isFull ? '#3E3E4A' : '#c9f236', borderRadius: 999 }} />
                         </div>
                       </div>
                     </div>
@@ -355,113 +309,105 @@ export default function HomePage() {
       </main>
 
       {/* FAB */}
-      <Link href="/spots/new" className="fixed bottom-20 right-4 bg-primary text-white font-extrabold w-14 h-14 rounded-full shadow-lg shadow-orange-300 hover:bg-orange-600 transition-all active:scale-95 z-10 flex items-center justify-center text-2xl">
-        +
+      <Link href="/spots/new" className="lime-glow" style={{
+        position: 'fixed', bottom: 'calc(68px + 16px)', right: 20, zIndex: 45,
+        width: 56, height: 56, borderRadius: '50%', background: '#c9f236',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 4px 24px rgba(201,242,54,0.35)', transition: 'transform 0.2s',
+      }}>
+        <span className="material-symbols-outlined" style={{ fontSize: 28, color: '#171e00', fontWeight: 700 }}>add</span>
       </Link>
 
-      {/* 하단 탭 */}
-      <nav className="bg-white border-t border-gray-100 flex fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-20">
+      {/* Bottom Nav */}
+      <nav style={{
+        position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+        width: '100%', maxWidth: 448, height: 68, zIndex: 50,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-around',
+        padding: '0 8px',
+        background: 'rgba(20,20,22,0.92)', backdropFilter: 'blur(16px)',
+        borderTop: '1px solid #2A2A32', borderRadius: '16px 16px 0 0',
+      }}>
         {[
-          { href: '/', icon: <MapIcon className="w-6 h-6" />, label: '스팟', active: true },
-          { href: '/benefits', icon: <GiftIcon className="w-6 h-6" />, label: '혜택', active: false },
-          { href: '/ranking', icon: <TrophyIcon className="w-6 h-6" />, label: '랭킹', active: false },
-          { href: '/mypage', icon: <UserIcon className="w-6 h-6" />, label: '마이', active: false },
-        ].map(({ href, icon, label, active }) => (
-          <Link key={href} href={href} className={`flex-1 flex flex-col items-center py-2.5 transition-colors ${active ? 'text-primary' : 'text-gray-300'}`}>
-            {icon}
-            <span className="text-xs mt-0.5 font-semibold">{label}</span>
+          { href: '/', key: 'home', icon: 'home', label: 'Home', active: true },
+          { href: '/?view=map', key: 'explore', icon: 'map', label: 'Explore', active: false },
+          { href: '/spots/new', key: 'host', icon: 'add_box', label: 'Host', active: false },
+          { href: '/ranking', key: 'ranking', icon: 'leaderboard', label: 'Ranks', active: false },
+          { href: '/benefits', key: 'benefits', icon: 'local_offer', label: '혜택', active: false },
+        ].map(tab => (
+          <Link key={tab.key} href={tab.href} style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            gap: 3, color: tab.active ? '#c9f236' : '#8A8A9A',
+            fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 600,
+            textTransform: 'uppercase', letterSpacing: '0.05em',
+            padding: '4px 8px', minWidth: 56, transition: 'color 0.2s',
+            filter: tab.active ? 'drop-shadow(0 0 6px rgba(201,242,54,0.35))' : 'none',
+          }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 24, fontVariationSettings: tab.active ? "'FILL' 1" : "'FILL' 0" }}>{tab.icon}</span>
+            {tab.label}
           </Link>
         ))}
       </nav>
 
-      {/* 동네 선택 바텀시트 */}
+      {/* Region Sheet */}
       {showRegionSheet && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowRegionSheet(false)} />
-          <div className="relative bg-white rounded-t-3xl px-4 pt-4 pb-8 max-h-[80vh] flex flex-col">
-            {/* 핸들 */}
-            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
-
-            <h2 className="text-lg font-extrabold text-gray-900 mb-3">동네 선택</h2>
-
-            {/* 검색창 */}
-            <div className="relative mb-4">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)' }} onClick={() => setShowRegionSheet(false)} />
+          <div style={{ position: 'relative', background: '#141416', borderRadius: '24px 24px 0 0', padding: '16px 16px 32px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', border: '1px solid #2A2A32', borderBottom: 'none' }}>
+            <div style={{ width: 40, height: 4, background: '#2A2A32', borderRadius: 999, margin: '0 auto 16px' }} />
+            <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 18, fontWeight: 700, color: '#e5e2e3', marginBottom: 12, textTransform: 'uppercase' }}>동네 선택</p>
+            <div style={{ position: 'relative', marginBottom: 16 }}>
+              <span className="material-symbols-outlined" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#8A8A9A', fontSize: 20 }}>search</span>
               <input
-                className="w-full bg-gray-100 rounded-xl pl-9 pr-4 py-3 text-sm outline-none focus:bg-gray-50 focus:ring-2 focus:ring-primary/20"
-                placeholder="동·읍·면으로 검색 (예: 역삼동, 수원시)"
+                style={{ width: '100%', background: '#1E1E22', border: '1px solid #2A2A32', borderRadius: 999, padding: '12px 12px 12px 40px', fontFamily: 'DM Sans, sans-serif', fontSize: 14, color: '#e5e2e3', outline: 'none' }}
+                placeholder="동·읍·면으로 검색…"
                 value={searchQuery}
                 onChange={e => handleSearch(e.target.value)}
                 autoFocus
               />
-              {searching && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              )}
+              {searching && <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, border: '2px solid #c9f236', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />}
             </div>
-
-            <div className="overflow-y-auto flex-1 space-y-1">
-              {/* GPS 현재 위치 */}
-              <button
-                onClick={useCurrentLocation}
-                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left"
-              >
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <span className="text-lg">📍</span>
+            <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <button onClick={useCurrentLocation} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', transition: 'background 0.2s' }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#1E1E22')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(201,242,54,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span className="material-symbols-outlined" style={{ color: '#c9f236', fontSize: 20 }}>my_location</span>
                 </div>
                 <div>
-                  <p className="font-bold text-gray-900 text-sm">현재 위치로 설정</p>
-                  <p className="text-xs text-gray-400">GPS로 자동 감지</p>
+                  <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, color: '#e5e2e3', fontSize: 14 }}>현재 위치로 설정</p>
+                  <p style={{ fontSize: 12, color: '#8A8A9A' }}>GPS로 자동 감지</p>
                 </div>
               </button>
-
-              {/* 검색 결과 */}
               {searchResults.map(r => (
-                <button
-                  key={r.name}
-                  onClick={() => selectRegion(r)}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-orange-50 transition-colors text-left"
-                >
-                  <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
-                    <span className="text-lg">🔍</span>
+                <button key={r.name} onClick={() => selectRegion(r)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, background: 'rgba(201,242,54,0.05)', border: '1px solid rgba(201,242,54,0.15)', cursor: 'pointer', textAlign: 'left' }}>
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(201,242,54,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span className="material-symbols-outlined" style={{ color: '#c9f236', fontSize: 20 }}>search</span>
                   </div>
                   <div>
-                    <p className="font-bold text-gray-900 text-sm">{r.name}</p>
-                    <p className="text-xs text-gray-400">탭하여 이 동네로 이동</p>
+                    <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, color: '#e5e2e3', fontSize: 14 }}>{r.name}</p>
+                    <p style={{ fontSize: 12, color: '#8A8A9A' }}>탭하여 이 동네로 이동</p>
                   </div>
                 </button>
               ))}
-
-              {/* 최근 동네 */}
               {!searchQuery && recentRegions.length > 0 && (
                 <>
-                  <p className="text-xs font-extrabold text-gray-400 uppercase tracking-wide px-1 pt-3 pb-1">최근 동네</p>
+                  <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8A8A9A', padding: '12px 4px 4px' }}>최근 동네</p>
                   {recentRegions.map(r => (
-                    <button
-                      key={r.name}
-                      onClick={() => selectRegion(r)}
-                      className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left ${
-                        region?.name === r.name ? 'bg-orange-50 border border-primary/20' : 'hover:bg-gray-50'
-                      }`}
-                    >
-                      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                        <span className="text-lg">🏘</span>
+                    <button key={r.name} onClick={() => selectRegion(r)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, background: region?.name === r.name ? 'rgba(201,242,54,0.08)' : 'transparent', border: region?.name === r.name ? '1px solid rgba(201,242,54,0.3)' : '1px solid transparent', cursor: 'pointer', textAlign: 'left' }}>
+                      <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#1E1E22', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span className="material-symbols-outlined" style={{ color: '#8A8A9A', fontSize: 20 }}>location_city</span>
                       </div>
-                      <div className="flex-1">
-                        <p className="font-bold text-gray-900 text-sm">{r.name}</p>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, color: '#e5e2e3', fontSize: 14 }}>{r.name}</p>
                       </div>
-                      {region?.name === r.name && (
-                        <span className="text-xs font-bold text-primary">현재</span>
-                      )}
+                      {region?.name === r.name && <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 700, color: '#c9f236', textTransform: 'uppercase' }}>현재</span>}
                     </button>
                   ))}
                 </>
               )}
-
               {searchQuery && !searching && searchResults.length === 0 && (
-                <div className="text-center py-8 text-gray-400 text-sm">
-                  검색 결과가 없습니다.<br />다른 이름으로 검색해보세요.
+                <div style={{ textAlign: 'center', padding: '32px 0', color: '#8A8A9A', fontSize: 14 }}>
+                  검색 결과가 없습니다.<br/>다른 이름으로 검색해보세요.
                 </div>
               )}
             </div>
@@ -470,20 +416,4 @@ export default function HomePage() {
       )}
     </div>
   );
-}
-
-function GiftIcon({ className }: { className?: string }) {
-  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" /></svg>;
-}
-function MapIcon({ className }: { className?: string }) {
-  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>;
-}
-function ListIcon({ className }: { className?: string }) {
-  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>;
-}
-function TrophyIcon({ className }: { className?: string }) {
-  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>;
-}
-function UserIcon({ className }: { className?: string }) {
-  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
 }

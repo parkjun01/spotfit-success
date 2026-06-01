@@ -3,17 +3,25 @@ import Script from 'next/script';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'SpotFit — 운동 파티 매칭',
-  description: '위치 기반 1회성 운동 파티 매칭 플랫폼',
+  title: 'SPOTFIT — 운동 파티 매칭',
+  description: '도심 속 운동 메이트를 찾아라. SPOTFIT으로 근처 스팟을 발견하고 함께 땀 흘릴 크루를 만나세요.',
   manifest: '/manifest.json',
-  themeColor: '#F97316',
+  themeColor: '#131314',
   viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko">
-      <body className="max-w-md mx-auto min-h-screen bg-gray-50">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="max-w-md mx-auto min-h-screen" style={{ background: '#131314' }}>
         {children}
         <Script
           src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_JS_KEY}`}

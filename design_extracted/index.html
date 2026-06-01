@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SPOTFIT — Home</title>
+  <meta name="description" content="도심 속 운동 메이트를 찾아라. SPOTFIT으로 근처 스팟을 발견하고 함께 땀 흘릴 크루를 만나세요."/>
+  <link rel="stylesheet" href="style.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <style>
+    /* ── Hero ── */
+    .hero {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(160deg, #1a1f00 0%, #131314 55%);
+      padding: 40px var(--page-margin) 36px;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 260px; height: 260px;
+      background: radial-gradient(circle, rgba(200,241,53,0.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero .greeting {
+      font-family: var(--font-headline);
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--color-on-surface-variant);
+      margin-bottom: 6px;
+    }
+    .hero h1 {
+      font-family: var(--font-display);
+      font-size: 52px;
+      line-height: 0.95;
+      color: var(--color-primary-fixed);
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      margin-bottom: 12px;
+    }
+    .hero h1 span { color: var(--color-on-background); }
+    .hero p {
+      font-size: 14px;
+      color: var(--color-text-secondary);
+      max-width: 280px;
+      line-height: 1.55;
+    }
+
+    /* ── Search Bar ── */
+    .search-wrap {
+      padding: var(--space-base) var(--page-margin) 0;
+    }
+    .search-bar {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .search-bar .material-symbols-outlined {
+      position: absolute;
+      left: 14px;
+      color: var(--color-text-secondary);
+      font-size: 22px;
+    }
+    .search-bar input {
+      width: 100%;
+      background: var(--color-elevated);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-full);
+      padding: 13px 48px 13px 46px;
+      font-family: var(--font-body);
+      font-size: 14px;
+      color: var(--color-on-background);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-bar input::placeholder { color: var(--color-text-disabled); }
+    .search-bar input:focus { border-color: var(--color-primary-fixed); }
+    .search-bar .filter-btn {
+      position: absolute;
+      right: 6px;
+      width: 36px; height: 36px;
+      background: var(--color-primary-container);
+      border-radius: var(--radius-full);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--color-on-primary-fixed);
+      transition: transform 0.15s;
+    }
+    .search-bar .filter-btn:active { transform: scale(0.88); }
+
+    /* ── Sport Pills ── */
+    .sport-scroll {
+      display: flex;
+      gap: var(--space-sm);
+      overflow-x: auto;
+      padding: var(--space-md) var(--page-margin);
+    }
+    .sport-pill {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      min-width: 64px;
+      padding: 12px 8px;
+      background: var(--color-elevated);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      font-family: var(--font-headline);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-text-secondary);
+      transition: all 0.2s;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .sport-pill .material-symbols-outlined { font-size: 22px; }
+    .sport-pill:hover  { border-color: var(--color-primary-fixed); color: var(--color-on-background); }
+    .sport-pill:active { transform: scale(0.92); }
+    .sport-pill.active {
+      background: rgba(200,241,53,0.08);
+      border-color: var(--color-primary-fixed);
+      color: var(--color-primary-fixed);
+    }
+
+    /* ── Spot Card ── */
+    .spot-card {
+      background: var(--color-elevated);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+    .spot-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    }
+    .spot-card:active { transform: scale(0.98); }
+    .spot-card .card-img {
+      width: 100%; height: 140px;
+      object-fit: cover;
+      background: var(--color-surface-high);
+    }
+    .spot-card .card-img-placeholder {
+      width: 100%; height: 140px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 48px;
+    }
+    .spot-card .card-body { padding: var(--space-base); }
+    .spot-card .card-tags { display: flex; gap: var(--space-xs); margin-bottom: var(--space-sm); flex-wrap: wrap; }
+    .spot-card .card-title {
+      font-family: var(--font-headline);
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--color-on-background);
+      margin-bottom: 6px;
+      line-height: 1.25;
+    }
+    .spot-card .card-meta {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 13px;
+      color: var(--color-text-secondary);
+      margin-bottom: var(--space-sm);
+    }
+    .spot-card .card-meta .material-symbols-outlined { font-size: 16px; }
+    .spot-card .card-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      border-top: 1px solid var(--color-border);
+      padding-top: var(--space-sm);
+    }
+    .spot-card .members {
+      display: flex; align-items: center; gap: 5px;
+      font-family: var(--font-headline);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--color-primary-fixed);
+    }
+    .spot-card .members .material-symbols-outlined { font-size: 18px; }
+    .avatar-stack { display: flex; }
+    .avatar-stack .avatar { width: 26px; height: 26px; margin-left: -8px; border-width: 1.5px; font-size: 10px; }
+    .avatar-stack .avatar:first-child { margin-left: 0; }
+
+    /* ── Quick Stats Banner ── */
+    .stats-banner {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-sm);
+      padding: 0 var(--page-margin);
+    }
+
+    /* ── FAB ── */
+    .fab {
+      position: fixed;
+      bottom: calc(var(--nav-bottom-h) + 16px);
+      right: 20px;
+      z-index: 45;
+      width: 56px; height: 56px;
+      background: var(--color-primary-container);
+      border-radius: var(--radius-full);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--color-on-primary-fixed);
+      box-shadow: 0 4px 24px rgba(200,241,53,0.35);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .fab:hover  { box-shadow: 0 6px 32px rgba(200,241,53,0.5); }
+    .fab:active { transform: scale(0.9); }
+    .fab .material-symbols-outlined { font-size: 28px; }
+  </style>
+</head>
+<body>
+
+<!-- ── Top Nav ── -->
+<header class="top-nav">
+  <span class="logo">SPOTFIT</span>
+  <div class="nav-actions">
+    <button class="icon-btn" aria-label="알림">
+      <span class="material-symbols-outlined">notifications</span>
+    </button>
+    <a href="#" style="width:34px;height:34px;border-radius:50%;overflow:hidden;border:2px solid var(--color-primary-fixed);display:block;">
+      <div style="width:100%;height:100%;background:var(--color-surface-high);display:flex;align-items:center;justify-content:center;">
+        <span class="material-symbols-outlined" style="font-size:20px;color:var(--color-text-secondary);">person</span>
+      </div>
+    </a>
+  </div>
+</header>
+
+<!-- ── Hero ── -->
+<section class="hero fade-up">
+  <p class="greeting">서울 · 오늘</p>
+  <h1>FIND<br/><span>YOUR</span><br/>SPOT</h1>
+  <p>도심 속 최고의 운동 스팟을 발견하고<br/>함께 땀 흘릴 크루를 만나세요.</p>
+</section>
+
+<!-- ── Search ── -->
+<div class="search-wrap fade-up delay-1">
+  <div class="search-bar">
+    <span class="material-symbols-outlined">search</span>
+    <input type="text" id="home-search" placeholder="종목, 지역, 크루 검색…" autocomplete="off"/>
+    <button class="filter-btn" aria-label="필터">
+      <span class="material-symbols-outlined" style="font-size:18px;">tune</span>
+    </button>
+  </div>
+</div>
+
+<!-- ── Sport Categories ── -->
+<nav class="sport-scroll no-scrollbar fade-up delay-2" aria-label="종목 필터">
+  <button class="sport-pill active" onclick="filterSport(this,'all')" id="pill-all">
+    <span class="material-symbols-outlined">bolt</span>ALL
+  </button>
+  <button class="sport-pill" onclick="filterSport(this,'soccer')" id="pill-soccer">
+    <span class="material-symbols-outlined">sports_soccer</span>Soccer
+  </button>
+  <button class="sport-pill" onclick="filterSport(this,'basketball')" id="pill-basketball">
+    <span class="material-symbols-outlined">sports_basketball</span>Hoops
+  </button>
+  <button class="sport-pill" onclick="filterSport(this,'tennis')" id="pill-tennis">
+    <span class="material-symbols-outlined">sports_tennis</span>Tennis
+  </button>
+  <button class="sport-pill" onclick="filterSport(this,'gym')" id="pill-gym">
+    <span class="material-symbols-outlined">fitness_center</span>Gym
+  </button>
+  <button class="sport-pill" onclick="filterSport(this,'swim')" id="pill-swim">
+    <span class="material-symbols-outlined">pool</span>Swim
+  </button>
+  <button class="sport-pill" onclick="filterSport(this,'badminton')" id="pill-badminton">
+    <span class="material-symbols-outlined">sports_badminton</span>배드민턴
+  </button>
+</nav>
+
+<!-- ── Quick Stats ── -->
+<div class="stats-banner fade-up delay-2">
+  <div class="stat-box">
+    <span class="stat-value">247</span>
+    <span class="stat-label">Active Spots</span>
+  </div>
+  <div class="stat-box">
+    <span class="stat-value">1.2K</span>
+    <span class="stat-label">Members</span>
+  </div>
+  <div class="stat-box">
+    <span class="stat-value">98%</span>
+    <span class="stat-label">Match Rate</span>
+  </div>
+</div>
+
+<!-- ── Featured Spots ── -->
+<main class="page-content" style="padding-top: var(--space-lg);">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-md);">
+    <h2 class="text-xl">🔥 Hot Spots</h2>
+    <a href="explore.html" style="font-family:var(--font-headline);font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--color-primary-fixed);">
+      See All →
+    </a>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:var(--space-md);" id="spots-list">
+
+    <!-- Card 1 -->
+    <article class="spot-card fade-up delay-2" onclick="location.href='spot-details.html'">
+      <div class="card-img-placeholder" style="background:linear-gradient(135deg,#1a2200,#0d1a00);">🏀</div>
+      <div class="card-body">
+        <div class="card-tags">
+          <span class="pill active">모집중</span>
+          <span class="pill">Hoops</span>
+          <span class="pill">Competitive</span>
+        </div>
+        <p class="card-title">한강공원 농구 5:5 / 즉전 환영</p>
+        <div class="card-meta">
+          <span class="material-symbols-outlined">location_on</span>
+          여의도 한강공원 농구장 · 오후 7:00
+        </div>
+        <div class="card-footer">
+          <span class="members">
+            <span class="material-symbols-outlined icon-fill">group</span>7/10
+          </span>
+          <div class="avatar-stack">
+            <div class="avatar" style="width:26px;height:26px;background:var(--color-surface-high);display:flex;align-items:center;justify-content:center;border-radius:50%;border:1.5px solid var(--color-primary-fixed);">
+              <span style="font-size:11px;">JY</span>
+            </div>
+            <div class="avatar" style="width:26px;height:26px;background:var(--color-surface-high);display:flex;align-items:center;justify-content:center;border-radius:50%;border:1.5px solid var(--color-border);">
+              <span style="font-size:11px;">MK</span>
+            </div>
+            <div class="avatar" style="width:26px;height:26px;background:var(--color-surface-high);display:flex;align-items:center;justify-content:center;border-radius:50%;border:1.5px solid var(--color-border);">
+              <span style="font-size:11px;">+5</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- Card 2 -->
+    <article class="spot-card fade-up delay-3" onclick="location.href='spot-details.html'">
+      <div class="card-img-placeholder" style="background:linear-gradient(135deg,#001a0d,#131314);">⚽</div>
+      <div class="card-body">
+        <div class="card-tags">
+          <span class="pill active">모집중</span>
+          <span class="pill">Soccer</span>
+          <span class="pill">Beginner Friendly</span>
+        </div>
+        <p class="card-title">상암 풋살 / 초급 환영 · 장비 있음</p>
+        <div class="card-meta">
+          <span class="material-symbols-outlined">location_on</span>
+          마포구 상암동 풋살파크 · 오전 10:00
+        </div>
+        <div class="card-footer">
+          <span class="members">
+            <span class="material-symbols-outlined icon-fill">group</span>4/12
+          </span>
+          <div style="display:flex;align-items:center;gap:4px;font-family:var(--font-headline);font-size:13px;color:var(--color-primary-fixed);">
+            <span class="material-symbols-outlined icon-fill" style="font-size:16px;">star</span>4.9
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- Card 3 -->
+    <article class="spot-card fade-up delay-4" onclick="location.href='spot-details.html'">
+      <div class="card-img-placeholder" style="background:linear-gradient(135deg,#160020,#131314);">🏋️</div>
+      <div class="card-body">
+        <div class="card-tags">
+          <span class="pill" style="background:rgba(253,89,30,0.15);color:var(--color-orange);border-color:var(--color-orange);">마감임박</span>
+          <span class="pill">Gym</span>
+          <span class="pill">Pro Only</span>
+        </div>
+        <p class="card-title">선릉역 크로스핏 6AM 세션</p>
+        <div class="card-meta">
+          <span class="material-symbols-outlined">location_on</span>
+          강남구 선릉역 2번 출구 · 오전 6:00
+        </div>
+        <div class="card-footer">
+          <span class="members">
+            <span class="material-symbols-outlined icon-fill">group</span>9/10
+          </span>
+          <div style="display:flex;align-items:center;gap:4px;font-family:var(--font-headline);font-size:13px;color:var(--color-primary-fixed);">
+            <span class="material-symbols-outlined icon-fill" style="font-size:16px;">star</span>5.0
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- Card 4 -->
+    <article class="spot-card fade-up delay-5" onclick="location.href='spot-details.html'">
+      <div class="card-img-placeholder" style="background:linear-gradient(135deg,#001a1a,#131314);">🎾</div>
+      <div class="card-body">
+        <div class="card-tags">
+          <span class="pill active">모집중</span>
+          <span class="pill">Tennis</span>
+          <span class="pill">Casual</span>
+        </div>
+        <p class="card-title">올림픽공원 테니스 혼복 매칭</p>
+        <div class="card-meta">
+          <span class="material-symbols-outlined">location_on</span>
+          송파구 올림픽공원 · 오후 3:00
+        </div>
+        <div class="card-footer">
+          <span class="members">
+            <span class="material-symbols-outlined icon-fill">group</span>2/4
+          </span>
+          <div style="display:flex;align-items:center;gap:4px;font-family:var(--font-headline);font-size:13px;color:var(--color-primary-fixed);">
+            <span class="material-symbols-outlined icon-fill" style="font-size:16px;">star</span>4.7
+          </div>
+        </div>
+      </div>
+    </article>
+
+  </div>
+</main>
+
+<!-- ── FAB ── -->
+<a href="explore.html" class="fab lime-glow" aria-label="지도에서 스팟 찾기">
+  <span class="material-symbols-outlined">map</span>
+</a>
+
+<!-- ── Bottom Nav ── -->
+<nav class="bottom-nav" aria-label="메인 네비게이션">
+  <a href="index.html" class="active" id="nav-home">
+    <span class="material-symbols-outlined icon-fill">home</span>Home
+  </a>
+  <a href="explore.html" id="nav-explore">
+    <span class="material-symbols-outlined">map</span>Explore
+  </a>
+  <a href="explore.html" id="nav-host">
+    <span class="material-symbols-outlined">add_box</span>Host
+  </a>
+  <a href="ranking.html" id="nav-ranking">
+    <span class="material-symbols-outlined">leaderboard</span>Ranks
+  </a>
+  <a href="benefits.html" id="nav-benefits">
+    <span class="material-symbols-outlined">local_offer</span>혜택
+  </a>
+</nav>
+
+<script>
+  function filterSport(el, sport) {
+    document.querySelectorAll('.sport-pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    // Visual feedback only — full filtering would use real data
+    el.style.transform = 'scale(0.9)';
+    setTimeout(() => el.style.transform = '', 120);
+  }
+</script>
+</body>
+</html>
