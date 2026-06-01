@@ -165,22 +165,25 @@ export default function SpotMap({ spots, center, onSpotClick }: Props) {
       <div ref={mapRef} style={{ width: '100%', height: '100%', minHeight: '100vh' }} />
       {mapError && (
         <div style={{
-          position: 'absolute', top: 16, left: 16, right: 16, zIndex: 999,
-          background: 'rgba(15,15,20,0.96)', color: '#f87171', borderRadius: 10,
-          padding: '14px 16px', fontSize: 13, lineHeight: 1.6,
-          border: '1px solid #ef4444', wordBreak: 'break-all',
+          position: 'fixed', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          zIndex: 99999,
+          width: 'min(90vw, 420px)',
+          background: '#0F0F14', color: '#f87171', borderRadius: 14,
+          padding: '20px 20px', fontSize: 13, lineHeight: 1.7,
+          border: '2px solid #ef4444', wordBreak: 'break-all',
+          boxShadow: '0 0 40px rgba(239,68,68,0.3)',
         }}>
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>🗺️ 지도 오류</div>
-          <div>{mapError}</div>
-          <div style={{ marginTop: 8, color: '#9CA3AF', fontSize: 12 }}>
-            사용 키: {KEY}
-          </div>
+          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 10 }}>🗺️ 지도 로드 오류</div>
+          <div style={{ background: 'rgba(239,68,68,0.1)', borderRadius: 8, padding: '10px 12px', marginBottom: 10 }}>{mapError}</div>
+          <div style={{ color: '#6B7280', fontSize: 11 }}>키: {KEY}</div>
         </div>
       )}
       {!mapReady && !mapError && (
         <div style={{
-          position: 'absolute', top: '50%', left: '50%',
+          position: 'fixed', top: '50%', left: '50%',
           transform: 'translate(-50%,-50%)',
+          zIndex: 99999,
           color: '#8A8A9A', fontSize: 14, textAlign: 'center', pointerEvents: 'none',
         }}>
           지도 로딩 중...
