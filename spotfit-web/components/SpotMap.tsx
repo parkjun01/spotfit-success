@@ -32,56 +32,8 @@ function markerSvg(color: string, cur: number, max: number) {
 
 const PULSE = `<div style="position:relative;width:32px;height:32px;display:flex;align-items:center;justify-content:center;"><div style="position:absolute;width:32px;height:32px;border-radius:50%;background:rgba(201,242,54,0.35);animation:pulsering 2s ease-out infinite;"></div><div style="width:16px;height:16px;background:#c9f236;border-radius:50%;border:2.5px solid #fff;box-shadow:0 0 8px rgba(201,242,54,0.6);position:relative;z-index:1;"></div></div>`;
 
-const KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || '41f7052cc54daa806a96d14075ab4d57';
-
-let kakaoLoadPromise: Promise<void> | null = null;
-
-function loadKakaoSDK(): Promise<void> {
-  if (kakaoLoadPromise) return kakaoLoadPromise;
-
-  const win = window as any;
-
-  // 이미 로드된 경우
-  if (win.kakao?.maps) {
-    kakaoLoadPromise = Promise.resolve();
-    return kakaoLoadPromise;
-  }
-
-  kakaoLoadPromise = new Promise((resolve, reject) => {
-    // autoload=false로 스크립트 주입
-    const existing = document.querySelector('script[src*="dapi.kakao.com/v2/maps"]');
-    if (!existing) {
-      const s = document.createElement('script');
-      s.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KEY}&autoload=false`;
-      s.onerror = () => reject(new Error(`Kakao SDK 스크립트 로드 실패 (네트워크 오류 또는 잘못된 키)`));
-      s.onload = () => {
-        const k = (window as any).kakao;
-        if (!k) {
-          reject(new Error('kakao 객체가 없음 — 키 확인 필요'));
-          return;
-        }
-        if (!k.maps) {
-          reject(new Error('kakao.maps 없음 — 도메인 미등록 가능성'));
-          return;
-        }
-        k.maps.load(() => resolve());
-      };
-      document.head.appendChild(s);
-    } else {
-      // 스크립트는 있지만 maps가 아직 없는 경우 — kakao.maps.load 대기
-      const wait = setInterval(() => {
-        const k = (window as any).kakao;
-        if (k?.maps?.load) {
-          clearInterval(wait);
-          k.maps.load(() => resolve());
-        }
-      }, 100);
-      setTimeout(() => { clearInterval(wait); reject(new Error('kakao.maps.load 타임아웃')); }, 8000);
-    }
-  });
-
-  return kakaoLoadPromise;
-}
+const JS_KEY = '41f7052cc54daa806a96d14075ab4d57';
+const SDK_URL = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${JS_KEY}`;
 
 export default function SpotMap({ spots, center, onSpotClick }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -92,29 +44,45 @@ export default function SpotMap({ spots, center, onSpotClick }: Props) {
   const [mapError, setMapError] = useState<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
 
-  // 지도 초기화
   useEffect(() => {
     if (!mapRef.current) return;
-    setMapError(null);
 
-    loadKakaoSDK()
-      .then(() => {
+    // 이미 초기화됐으면 센터만 업데이트
+    if (mapInstanceRef.current) {
+      const kakao = (window as any).kakao;
+      const lat = center?.lat ?? 37.5665;
+      const lng = center?.lng ?? 126.978;
+      mapInstanceRef.current.setCenter(new kakao.maps.LatLng(lat, lng));
+      return;
+    }
+
+    // 기존 스크립트 전부 제거 후 새로 주입 (캐시된 잘못된 스크립트 방지)
+    document.querySelectorAll('script[src*="dapi.kakao.com/v2/maps"]').forEach(s => s.remove());
+    delete (window as any).kakao;
+
+    const script = document.createElement('script');
+    script.src = SDK_URL;
+
+    script.onerror = () => {
+      setMapError(`SDK 네트워크 오류 — 키: ${JS_KEY}`);
+    };
+
+    script.onload = () => {
+      const kakao = (window as any).kakao;
+      if (!kakao) { setMapError('kakao 객체 없음'); return; }
+      if (!kakao.maps) { setMapError('kakao.maps 없음 — 도메인 미등록 확인'); return; }
+
+      try {
         if (!mapRef.current) return;
-        const kakao = (window as any).kakao;
         const lat = center?.lat ?? 37.5665;
-        const lng = center?.lng ?? 126.9780;
+        const lng = center?.lng ?? 126.978;
 
-        if (!mapInstanceRef.current) {
-          mapInstanceRef.current = new kakao.maps.Map(mapRef.current, {
-            center: new kakao.maps.LatLng(lat, lng),
-            level: 7,
-          });
-        } else {
-          mapInstanceRef.current.setCenter(new kakao.maps.LatLng(lat, lng));
-        }
+        mapInstanceRef.current = new kakao.maps.Map(mapRef.current, {
+          center: new kakao.maps.LatLng(lat, lng),
+          level: 7,
+        });
         setMapReady(true);
 
-        // 현재 위치 펄스
         if (overlayRef.current) overlayRef.current.setMap(null);
         if (center) {
           overlayRef.current = new kakao.maps.CustomOverlay({
@@ -124,11 +92,26 @@ export default function SpotMap({ spots, center, onSpotClick }: Props) {
           });
           overlayRef.current.setMap(mapInstanceRef.current);
         }
-      })
-      .catch((err: Error) => {
-        setMapError(err.message);
-        kakaoLoadPromise = null; // 다음에 재시도 가능하도록 초기화
-      });
+      } catch (e: any) {
+        setMapError(`지도 초기화 실패: ${e?.message}`);
+      }
+    };
+
+    document.head.appendChild(script);
+  }, []);
+
+  // 센터 변경 시 지도 이동
+  useEffect(() => {
+    if (!mapInstanceRef.current || !center) return;
+    const kakao = (window as any).kakao;
+    if (!kakao?.maps) return;
+    mapInstanceRef.current.setCenter(new kakao.maps.LatLng(center.lat, center.lng));
+    if (overlayRef.current) overlayRef.current.setMap(null);
+    overlayRef.current = new kakao.maps.CustomOverlay({
+      position: new kakao.maps.LatLng(center.lat, center.lng),
+      content: PULSE, zIndex: 15,
+    });
+    overlayRef.current.setMap(mapInstanceRef.current);
   }, [center?.lat, center?.lng]);
 
   // 마커 업데이트
@@ -170,13 +153,13 @@ export default function SpotMap({ spots, center, onSpotClick }: Props) {
           zIndex: 99999,
           width: 'min(90vw, 420px)',
           background: '#0F0F14', color: '#f87171', borderRadius: 14,
-          padding: '20px 20px', fontSize: 13, lineHeight: 1.7,
+          padding: '20px', fontSize: 13, lineHeight: 1.7,
           border: '2px solid #ef4444', wordBreak: 'break-all',
           boxShadow: '0 0 40px rgba(239,68,68,0.3)',
         }}>
-          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 10 }}>🗺️ 지도 로드 오류</div>
-          <div style={{ background: 'rgba(239,68,68,0.1)', borderRadius: 8, padding: '10px 12px', marginBottom: 10 }}>{mapError}</div>
-          <div style={{ color: '#6B7280', fontSize: 11 }}>키: {KEY}</div>
+          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 10 }}>🗺️ 지도 오류</div>
+          <div style={{ background: 'rgba(239,68,68,0.1)', borderRadius: 8, padding: '10px 12px' }}>{mapError}</div>
+          <div style={{ marginTop: 8, color: '#6B7280', fontSize: 11 }}>키: {JS_KEY}</div>
         </div>
       )}
       {!mapReady && !mapError && (
@@ -184,7 +167,7 @@ export default function SpotMap({ spots, center, onSpotClick }: Props) {
           position: 'fixed', top: '50%', left: '50%',
           transform: 'translate(-50%,-50%)',
           zIndex: 99999,
-          color: '#8A8A9A', fontSize: 14, textAlign: 'center', pointerEvents: 'none',
+          color: '#8A8A9A', fontSize: 14, pointerEvents: 'none',
         }}>
           지도 로딩 중...
         </div>
