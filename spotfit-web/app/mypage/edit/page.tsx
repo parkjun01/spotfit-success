@@ -10,16 +10,12 @@ export default function EditProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [form, setForm] = useState({
-    nickname: '',
-    activityRegion: '',
-    preferredSports: [] as string[],
-  });
+  const [saved, setSaved] = useState(false);
+  const [form, setForm] = useState({ nickname: '', activityRegion: '', preferredSports: [] as string[] });
 
   useEffect(() => {
     const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
     if (!token) { router.push('/login'); return; }
-
     Promise.all([
       fetch('/api/users/me', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
       fetch('/api/sports').then(r => r.json()),
@@ -34,110 +30,106 @@ export default function EditProfilePage() {
     }).finally(() => setLoading(false));
   }, []);
 
-  const toggleSport = (id: string) => {
-    setForm(f => ({
-      ...f,
-      preferredSports: f.preferredSports.includes(id)
-        ? f.preferredSports.filter(s => s !== id)
-        : [...f.preferredSports, id],
-    }));
-  };
+  const toggleSport = (id: string) => setForm(f => ({
+    ...f, preferredSports: f.preferredSports.includes(id) ? f.preferredSports.filter(s => s !== id) : [...f.preferredSports, id],
+  }));
 
   const handleSave = async () => {
     if (!form.nickname.trim()) return setError('닉네임을 입력해주세요');
     if (form.nickname.length < 2 || form.nickname.length > 20) return setError('닉네임은 2~20자여야 합니다');
-    setSaving(true);
-    setError('');
+    setSaving(true); setError('');
     try {
       const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
       const res = await fetch('/api/users/me', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          nickname: form.nickname.trim(),
-          activityRegion: form.activityRegion.trim() || undefined,
-          preferredSports: form.preferredSports,
-        }),
+        body: JSON.stringify({ nickname: form.nickname.trim(), activityRegion: form.activityRegion.trim() || undefined, preferredSports: form.preferredSports }),
       });
       const data = await res.json();
       if (!res.ok) return setError(data.message || '저장 실패');
-
-      // Update stored user object
       for (const storage of [localStorage, sessionStorage]) {
         const stored = storage.getItem('user');
-        if (stored) {
-          storage.setItem('user', JSON.stringify({ ...JSON.parse(stored), nickname: form.nickname.trim() }));
-        }
+        if (stored) storage.setItem('user', JSON.stringify({ ...JSON.parse(stored), nickname: form.nickname.trim() }));
       }
-      router.push('/mypage');
+      setSaved(true);
+      setTimeout(() => router.push('/mypage'), 800);
     } finally { setSaving(false); }
   };
 
   if (loading) return (
-    <div className="flex items-center justify-center h-screen">
-      <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#131314' }}>
+      <div style={{ width: 32, height: 32, border: '3px solid #c9f236', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
-        <button onClick={() => router.back()} className="text-gray-500 text-lg">←</button>
-        <h1 className="text-lg font-bold text-gray-900">프로필 수정</h1>
+    <div style={{ minHeight: '100vh', background: '#131314', paddingBottom: 100 }}>
+      <header style={{ position: 'sticky', top: 0, zIndex: 40, height: 64, display: 'flex', alignItems: 'center', gap: 12, padding: '0 16px', background: 'rgba(19,19,20,0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid #2A2A32' }}>
+        <button onClick={() => router.back()} style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c9f236', background: 'transparent', border: 'none', cursor: 'pointer' }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 24 }}>arrow_back</span>
+        </button>
+        <h1 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 22, color: '#c9f236', letterSpacing: '0.05em', flex: 1 }}>프로필 수정</h1>
+        {saved && <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, color: '#22C55E', textTransform: 'uppercase' }}>저장됨 ✓</span>}
       </header>
 
-      <div className="p-4 space-y-4 pb-32">
-        <div className="card space-y-3">
+      <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* Basic Info */}
+        <div style={{ background: '#141416', border: '1px solid #2A2A32', borderRadius: 16, padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">닉네임</label>
+            <label style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#8A8A9A', marginBottom: 6, display: 'block' }}>닉네임</label>
             <input
-              className="input w-full"
+              style={{ width: '100%', background: '#1E1E22', border: '1px solid #2A2A32', borderRadius: 10, padding: '12px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: 14, color: '#e5e2e3', outline: 'none', boxSizing: 'border-box' }}
               value={form.nickname}
               onChange={e => setForm(f => ({ ...f, nickname: e.target.value }))}
+              onFocus={e => (e.target.style.borderColor = '#c9f236')}
+              onBlur={e => (e.target.style.borderColor = '#2A2A32')}
               maxLength={20}
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">활동 지역</label>
+            <label style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#8A8A9A', marginBottom: 6, display: 'block' }}>활동 지역</label>
             <input
-              className="input w-full"
+              style={{ width: '100%', background: '#1E1E22', border: '1px solid #2A2A32', borderRadius: 10, padding: '12px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: 14, color: '#e5e2e3', outline: 'none', boxSizing: 'border-box' }}
               placeholder="예: 서울 강남구"
               value={form.activityRegion}
               onChange={e => setForm(f => ({ ...f, activityRegion: e.target.value }))}
+              onFocus={e => (e.target.style.borderColor = '#c9f236')}
+              onBlur={e => (e.target.style.borderColor = '#2A2A32')}
             />
           </div>
         </div>
 
-        <div className="card space-y-3">
-          <p className="text-sm font-bold text-gray-800">선호 종목</p>
-          <div className="grid grid-cols-3 gap-2">
-            {sports.map(s => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => toggleSport(s.id)}
-                className={`py-2 px-3 rounded-xl text-sm font-medium border transition-colors ${
-                  form.preferredSports.includes(s.id)
-                    ? 'bg-primary text-white border-primary'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-primary'
-                }`}
-              >
-                {s.name}
-              </button>
-            ))}
+        {/* Sports */}
+        <div style={{ background: '#141416', border: '1px solid #2A2A32', borderRadius: 16, padding: 16 }}>
+          <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, textTransform: 'uppercase', color: '#e5e2e3', marginBottom: 12 }}>선호 종목</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
+            {sports.map(s => {
+              const active = form.preferredSports.includes(s.id);
+              return (
+                <button key={s.id} type="button" onClick={() => toggleSport(s.id)} style={{
+                  padding: '10px 8px', borderRadius: 10,
+                  fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, fontWeight: 700, textTransform: 'uppercase',
+                  border: `2px solid ${active ? '#c9f236' : '#2A2A32'}`,
+                  background: active ? 'rgba(201,242,54,0.1)' : '#1E1E22',
+                  color: active ? '#c9f236' : '#8A8A9A',
+                  cursor: 'pointer', transition: 'all 0.2s',
+                }}>{s.name}</button>
+              );
+            })}
           </div>
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-            <p className="text-red-600 text-sm">{error}</p>
+          <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 12, padding: '12px 16px' }}>
+            <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 14, color: '#EF4444' }}>{error}</p>
           </div>
         )}
       </div>
 
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 px-4 py-4">
-        <button className="btn-primary w-full" onClick={handleSave} disabled={saving}>
-          {saving ? '저장 중...' : '저장하기'}
+      {/* Bottom CTA */}
+      <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 448, background: 'rgba(10,10,11,0.95)', backdropFilter: 'blur(12px)', borderTop: '1px solid #2A2A32', padding: '12px 16px 20px', zIndex: 50 }}>
+        <button onClick={handleSave} disabled={saving} style={{ width: '100%', height: 52, background: saved ? '#22C55E' : saving ? '#2a2a2b' : '#c9f236', color: saving ? '#8A8A9A' : '#171e00', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 18, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', border: 'none', borderRadius: 12, cursor: saving ? 'default' : 'pointer', transition: 'all 0.2s' }}>
+          {saving ? '저장 중...' : saved ? '✓ 저장됨' : '저장하기'}
         </button>
       </div>
     </div>

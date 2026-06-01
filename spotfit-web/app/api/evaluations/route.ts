@@ -7,14 +7,17 @@ import { ok, created, error, handleError } from '@/lib/response';
 export async function GET(req: NextRequest) {
   try {
     const user = await requireAuth(req);
-    const { data, error: err } = await supabaseAdmin
+    // 완료된 스팟에서 아직 평가 안 한 것들
+    const { data: myParts, error: err } = await supabaseAdmin
       .from('participations')
-      .select(`spot_id, evaluation_completed, spots(id, title, starts_at, status, participations(user_id, status, users(id, nickname, profile_image)))`)
+      .select(`spot_id, evaluation_completed, spots!inner(id, title, starts_at, status, participations(user_id, status, users(id, nickname, profile_image)))`)
       .eq('user_id', user.id)
       .eq('evaluation_completed', false)
-      .eq('spots.status', 'completed');
+      .eq('status', 'joined');
     if (err) throw err;
-    return ok(data?.filter(p => p.spots) || []);
+    // 클라이언트에서 completed 스팟만 필터링
+    const pending = (myParts || []).filter((p: any) => p.spots?.status === 'completed');
+    return ok(pending);
   } catch (err) { return handleError(err); }
 }
 
