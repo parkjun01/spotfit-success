@@ -1,0 +1,22 @@
+{
+  "name": "SPOTFIT",
+  "short_name": "SPOTFIT",
+  "description": "도심 속 운동 파티 매칭 플랫폼",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#131314",
+  "theme_color": "#131314",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
