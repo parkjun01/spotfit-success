@@ -41,39 +41,14 @@ export default function SpotMap({ spots, center, onSpotClick }: Props) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMsg, setErrorMsg] = useState('');
 
-  // 지도 초기화 — window.kakao.maps가 layout.tsx Script에서 이미 로드됨
+  // 지도 초기화
   useEffect(() => {
     if (!mapRef.current) return;
     if (mapInstanceRef.current) return;
 
-    let attempts = 0;
-    const MAX = 60; // 6초 (100ms × 60)
-
-    const tryInit = () => {
+    const initMap = () => {
+      if (!mapRef.current) return;
       const kakao = (window as any).kakao;
-
-      if (!kakao) {
-        attempts++;
-        if (attempts >= MAX) {
-          setStatus('error');
-          setErrorMsg('kakao 객체 없음 — 스크립트 로드 실패 (키 또는 도메인 미등록)');
-        } else {
-          setTimeout(tryInit, 100);
-        }
-        return;
-      }
-
-      if (!kakao.maps?.Map) {
-        attempts++;
-        if (attempts >= MAX) {
-          setStatus('error');
-          setErrorMsg('kakao.maps.Map 없음 — 카카오 개발자 콘솔 도메인 등록 확인 필요');
-        } else {
-          setTimeout(tryInit, 100);
-        }
-        return;
-      }
-
       try {
         const lat = center?.lat ?? 37.5665;
         const lng = center?.lng ?? 126.978;
@@ -82,7 +57,6 @@ export default function SpotMap({ spots, center, onSpotClick }: Props) {
           level: 7,
         });
         setStatus('ready');
-
         if (center) {
           overlayRef.current = new kakao.maps.CustomOverlay({
             position: new kakao.maps.LatLng(lat, lng),
@@ -94,6 +68,49 @@ export default function SpotMap({ spots, center, onSpotClick }: Props) {
         setStatus('error');
         setErrorMsg(`지도 생성 오류: ${e?.message}`);
       }
+    };
+
+    let attempts = 0;
+    const MAX = 100; // 10초 (100ms × 100)
+
+    const tryInit = () => {
+      const kakao = (window as any).kakao;
+
+      if (!kakao) {
+        attempts++;
+        if (attempts >= MAX) {
+          setStatus('error');
+          setErrorMsg('kakao 객체 없음 — 스크립트 로드 실패');
+        } else {
+          setTimeout(tryInit, 100);
+        }
+        return;
+      }
+
+      if (!kakao.maps) {
+        attempts++;
+        if (attempts >= MAX) {
+          setStatus('error');
+          setErrorMsg('kakao.maps 없음 — 도메인 미등록 또는 잘못된 키');
+        } else {
+          setTimeout(tryInit, 100);
+        }
+        return;
+      }
+
+      // kakao.maps가 있지만 Map이 없으면 → autoload=false 상태, load() 호출
+      if (!kakao.maps.Map) {
+        if (typeof kakao.maps.load === 'function') {
+          kakao.maps.load(initMap);
+        } else {
+          setStatus('error');
+          setErrorMsg('kakao.maps.load 없음 — SDK 초기화 실패');
+        }
+        return;
+      }
+
+      // kakao.maps.Map이 이미 있으면 바로 초기화
+      initMap();
     };
 
     tryInit();
