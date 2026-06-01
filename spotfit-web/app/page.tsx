@@ -169,8 +169,8 @@ export default function HomePage() {
           </button>
         </header>
 
-        {/* Full-screen Kakao Map */}
-        <div style={{ position: 'fixed', inset: 0, zIndex: 0 }}>
+        {/* Full-screen Kakao Map — explicit height required for Kakao SDK */}
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, width: '100vw', height: '100dvh' }}>
           <SpotMap
             spots={spots}
             center={region ? { lat: region.lat, lng: region.lng } : undefined}

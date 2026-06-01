@@ -127,5 +127,5 @@ export default function SpotMap({ spots, center, onSpotClick }: Props) {
     });
   }, [spots]);
 
-  return <div ref={mapRef} style={{ width: '100%', height: '100%' }} />;
+  return <div ref={mapRef} style={{ width: '100%', height: '100%', minHeight: '100dvh' }} />;
 }

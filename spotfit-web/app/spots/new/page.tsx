@@ -51,11 +51,8 @@ export default function NewSpotPage() {
 
   const set = (key: string, value: string) => setForm(f => ({ ...f, [key]: value }));
 
-  // 빨간 테두리 클래스 헬퍼
   const invalid = (cond: boolean) =>
-    showErrors && cond
-      ? '!border-red-400 !bg-red-50 focus:!ring-red-200 focus:!border-red-400'
-      : '';
+    showErrors && cond ? '!border-red-500' : '';
 
   const useCurrentLocation = async () => {
     setLocating(true);
@@ -65,28 +62,13 @@ export default function NewSpotPage() {
         set('latitude', String(lat));
         set('longitude', String(lng));
         try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
-            { headers: { 'Accept-Language': 'ko' } }
-          );
+          const res = await fetch(`/api/reverse-geocode?lat=${lat}&lng=${lng}`);
           const data = await res.json();
-          if (data?.display_name) {
-            const parts = data.address;
-            const addr = [
-              parts?.city || parts?.province || parts?.state,
-              parts?.city_district || parts?.county || parts?.borough,
-              parts?.suburb || parts?.neighbourhood || parts?.quarter,
-              parts?.road,
-            ].filter(Boolean).join(' ');
-            set('locationName', addr || data.display_name.split(',').slice(0, 3).join(',').trim());
-          }
+          if (data.data?.name) set('locationName', data.data.name);
         } catch { /* 역지오코딩 실패 시 좌표만 유지 */ }
         setLocating(false);
       },
-      () => {
-        setError('위치 권한을 허용해주세요');
-        setLocating(false);
-      }
+      () => { setError('위치 권한을 허용해주세요'); setLocating(false); }
     );
   };
 
@@ -188,7 +170,7 @@ export default function NewSpotPage() {
           <div className="flex items-center justify-between">
             <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#e5e2e3', textTransform: 'uppercase' as const }}>종목 <span className="text-red-400">*</span></p>
             {showErrors && !form.sportId && (
-              <span className="text-xs text-red-500 font-medium">종목을 선택해주세요</span>
+              <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#EF4444' }}>종목을 선택해주세요</span>
             )}
           </div>
           <div className="grid grid-cols-3 gap-2">
@@ -212,7 +194,7 @@ export default function NewSpotPage() {
         <div className="card space-y-3">
           <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#e5e2e3', textTransform: 'uppercase' as const }}>기본 정보</p>
           <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">
+            <label style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: '#8A8A9A', marginBottom: 6, display: 'block' }}>
               제목 <span className="text-red-400">*</span>
             </label>
             <input
@@ -227,7 +209,7 @@ export default function NewSpotPage() {
             )}
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">설명 (선택)</label>
+            <label style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: '#8A8A9A', marginBottom: 6, display: 'block' }}>설명 (선택)</label>
             <textarea
               className="input w-full resize-none"
               placeholder="스팟에 대한 설명을 입력해주세요"
@@ -238,7 +220,7 @@ export default function NewSpotPage() {
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">난이도</label>
+            <label style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: '#8A8A9A', marginBottom: 6, display: 'block' }}>난이도</label>
             <div className="flex gap-2">
               {[['beginner', '초급'], ['intermediate', '중급'], ['advanced', '고급']].map(([val, label]) => (
                 <button
@@ -247,7 +229,7 @@ export default function NewSpotPage() {
                   className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
                     form.difficultyLevel === val
                       ? 'bg-primary text-white border-primary'
-                      : 'bg-white text-gray-600 border-gray-200'
+                      : 'bg-elevated text-text-secondary border-border-dark'
                   }`}
                 >
                   {label}
@@ -277,7 +259,7 @@ export default function NewSpotPage() {
               +
             </button>
           </div>
-          <p className="text-xs text-gray-400">최소 2명 · 최대 50명 (본인 포함)</p>
+          <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#8A8A9A' }}>최소 2명 · 최대 50명 (본인 포함)</p>
         </div>
 
         {/* 날짜 & 시간 */}
@@ -285,12 +267,12 @@ export default function NewSpotPage() {
           <div className="flex items-center justify-between">
             <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#e5e2e3', textTransform: 'uppercase' as const }}>날짜 & 시간 <span className="text-red-400">*</span></p>
             {showErrors && (!form.date || !form.time) && (
-              <span className="text-xs text-red-500 font-medium">날짜와 시간을 선택해주세요</span>
+              <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#EF4444' }}>날짜와 시간을 선택해주세요</span>
             )}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">날짜</label>
+              <label style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: '#8A8A9A', marginBottom: 6, display: 'block' }}>날짜</label>
               <input
                 className={`input w-full ${invalid(!form.date)}`}
                 type="date"
@@ -300,7 +282,7 @@ export default function NewSpotPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">시간</label>
+              <label style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: '#8A8A9A', marginBottom: 6, display: 'block' }}>시간</label>
               <input
                 className={`input w-full ${invalid(!form.time)}`}
                 type="time"
@@ -316,10 +298,10 @@ export default function NewSpotPage() {
           <div className="flex items-center justify-between">
             <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#e5e2e3', textTransform: 'uppercase' as const }}>장소 <span className="text-red-400">*</span></p>
             {showErrors && !form.locationName.trim() && (
-              <span className="text-xs text-red-500 font-medium">장소를 입력해주세요</span>
+              <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#EF4444' }}>장소를 입력해주세요</span>
             )}
             {showErrors && form.locationName.trim() && !form.latitude && (
-              <span className="text-xs text-red-500 font-medium">좌표 설정 필요</span>
+              <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#EF4444' }}>좌표 설정 필요</span>
             )}
           </div>
 
@@ -342,7 +324,7 @@ export default function NewSpotPage() {
                   document.head.appendChild(s);
                 }
               }}
-              className="py-2.5 rounded-xl border-2 border-primary text-primary text-sm font-semibold hover:bg-orange-50 transition-colors"
+              style={{ padding: '10px 0', borderRadius: 10, border: '1px solid #c9f236', color: '#c9f236', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, textTransform: 'uppercase', background: 'rgba(201,242,54,0.08)', cursor: 'pointer', transition: 'all 0.2s' }}
             >
               🔍 주소 검색
             </button>
@@ -350,14 +332,14 @@ export default function NewSpotPage() {
               type="button"
               onClick={useCurrentLocation}
               disabled={locating}
-              className="py-2.5 rounded-xl border-2 border-gray-200 text-gray-600 text-sm font-semibold hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
+              style={{ padding: '10px 0', borderRadius: 10, border: '1px solid #2A2A32', color: '#8A8A9A', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, textTransform: 'uppercase', background: '#1E1E22', cursor: 'pointer', transition: 'all 0.2s', opacity: locating ? 0.5 : 1 }}
             >
               {locating ? '변환 중...' : '📍 현재 위치'}
             </button>
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">
+            <label style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: '#8A8A9A', marginBottom: 6, display: 'block' }}>
               장소 주소 <span className="text-red-400">*</span>
             </label>
             <input
@@ -369,7 +351,7 @@ export default function NewSpotPage() {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">상세 장소명 (선택)</label>
+            <label style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: '#8A8A9A', marginBottom: 6, display: 'block' }}>상세 장소명 (선택)</label>
             <input
               className="input w-full"
               placeholder="예: 3층 풋살장, B동 입구 등"
@@ -379,11 +361,11 @@ export default function NewSpotPage() {
           </div>
 
           {form.latitude && form.longitude ? (
-            <p className="text-xs text-emerald-600 font-medium">
+            <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, color: '#22C55E', fontWeight: 700 }}>
               ✓ 위치 설정됨 ({parseFloat(form.latitude).toFixed(4)}, {parseFloat(form.longitude).toFixed(4)})
             </p>
           ) : showErrors && form.locationName.trim() ? (
-            <p className="text-xs text-red-500 font-medium">
+            <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#EF4444' }}>
               ⚠ 좌표가 없습니다. 주소 검색 또는 현재 위치 버튼을 눌러주세요
             </p>
           ) : null}
@@ -393,14 +375,14 @@ export default function NewSpotPage() {
         <div className={`card space-y-3 ${ageError ? 'ring-2 ring-red-400' : ''}`}>
           <div className="flex items-center justify-between">
             <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#e5e2e3', textTransform: 'uppercase' as const }}>나이 제한</p>
-            <span className="text-xs text-gray-400">선택사항</span>
+            <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#8A8A9A' }}>선택사항</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">최소 나이</label>
+              <label style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: '#8A8A9A', marginBottom: 6, display: 'block' }}>최소 나이</label>
               <div className="relative">
                 <input
-                  className={`input w-full pr-8 ${ageError ? '!border-red-400 !bg-red-50' : ''}`}
+                  className={`input w-full pr-8 ${ageError ? '!border-red-500' : ''}`}
                   type="number"
                   placeholder="제한 없음"
                   value={form.minAge}
@@ -412,10 +394,10 @@ export default function NewSpotPage() {
               </div>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">최대 나이</label>
+              <label style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: '#8A8A9A', marginBottom: 6, display: 'block' }}>최대 나이</label>
               <div className="relative">
                 <input
-                  className={`input w-full pr-8 ${ageError ? '!border-red-400 !bg-red-50' : ''}`}
+                  className={`input w-full pr-8 ${ageError ? '!border-red-500' : ''}`}
                   type="number"
                   placeholder="제한 없음"
                   value={form.maxAge}
@@ -428,9 +410,9 @@ export default function NewSpotPage() {
             </div>
           </div>
           {ageError ? (
-            <p className="text-xs text-red-500 font-medium">최소 나이가 최대 나이보다 클 수 없습니다</p>
+            <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#EF4444' }}>최소 나이가 최대 나이보다 클 수 없습니다</p>
           ) : (form.minAge || form.maxAge) ? (
-            <p className="text-xs text-indigo-600">
+            <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, color: '#c9f236', fontWeight: 600 }}>
               {form.minAge && form.maxAge
                 ? `${form.minAge}세 ~ ${form.maxAge}세만 참여 가능`
                 : form.minAge
@@ -445,7 +427,7 @@ export default function NewSpotPage() {
           <div className="card space-y-3">
             <div className="flex items-center justify-between">
               <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#e5e2e3', textTransform: 'uppercase' as const }}>태그</p>
-              <span className="text-xs text-gray-400">선택사항 · 최대 5개</span>
+              <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#8A8A9A' }}>선택사항 · 최대 5개</span>
             </div>
             <div className="flex flex-wrap gap-2">
               {tags.map(tag => (
@@ -462,7 +444,7 @@ export default function NewSpotPage() {
                   className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                     selectedTagIds.includes(tag.id)
                       ? 'bg-primary text-white border-primary'
-                      : 'bg-white text-gray-600 border-gray-200 hover:border-primary'
+                      : 'bg-elevated text-text-secondary border-border-dark hover:border-primary'
                   }`}
                 >
                   #{tag.name}
@@ -478,16 +460,16 @@ export default function NewSpotPage() {
             <div className="flex items-center justify-between">
               <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#e5e2e3', textTransform: 'uppercase' as const }}>📍 GPX 경로 파일 <span className="text-gray-400 font-normal text-xs">(선택사항)</span></p>
             </div>
-            <p className="text-xs text-gray-400">러닝/등산 코스를 GPX 파일로 공유하면 참여자들이 경로를 미리 확인할 수 있어요.</p>
+            <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#8A8A9A' }}>러닝/등산 코스를 GPX 파일로 공유하면 참여자들이 경로를 미리 확인할 수 있어요.</p>
             <label className={`flex items-center gap-3 p-3 rounded-xl border-2 border-dashed cursor-pointer transition-colors ${
-              gpxFile ? 'border-primary bg-orange-50' : 'border-gray-200 hover:border-primary'
+              gpxFile ? 'border-primary' : 'border-border-dark hover:border-primary'
             }`}>
               <span className="text-2xl">{gpxFile ? '✅' : '📂'}</span>
               <div className="flex-1 min-w-0">
                 {gpxFile ? (
                   <>
                     <p className="text-sm font-bold text-primary truncate">{gpxFile.name}</p>
-                    <p className="text-xs text-gray-400">{(gpxFile.size / 1024).toFixed(1)} KB</p>
+                    <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#8A8A9A' }}>{(gpxFile.size / 1024).toFixed(1)} KB</p>
                   </>
                 ) : (
                   <p className="text-sm text-gray-500">GPX 파일 선택 (.gpx)</p>
@@ -511,32 +493,28 @@ export default function NewSpotPage() {
             <button
               type="button"
               onClick={() => setNoShowPrevention(v => !v)}
-              className={`w-12 h-6 rounded-full transition-colors relative ${noShowPrevention ? 'bg-primary' : 'bg-gray-200'}`}
+              style={{ position: 'relative', width: 48, height: 24, borderRadius: 999, border: 'none', cursor: 'pointer', background: noShowPrevention ? '#c9f236' : '#2a2a2b', transition: 'background 0.2s' }}
             >
-              <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${noShowPrevention ? 'translate-x-6' : 'translate-x-0.5'}`} />
+              <span style={{ position: 'absolute', top: 2, left: noShowPrevention ? 'calc(100% - 22px)' : 2, width: 20, height: 20, borderRadius: '50%', background: noShowPrevention ? '#171e00' : '#8A8A9A', transition: 'left 0.2s', display: 'block' }} />
             </button>
           </div>
           {noShowPrevention && (
-            <div className="mt-3 bg-orange-50 rounded-xl p-3">
-              <p className="text-xs text-orange-700 font-medium">✓ 노쇼 방지 활성화 시 참여자가 24시간 전 취소하지 않으면 매너점수 -2점이 부과됩니다.</p>
+            <div style={{ marginTop: 12, background: 'rgba(253,89,30,0.08)', border: '1px solid rgba(253,89,30,0.25)', borderRadius: 10, padding: '10px 12px' }}>
+              <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#fd591e' }}>✓ 노쇼 방지 활성화 시 참여자가 24시간 전 취소하지 않으면 매너점수 -2점이 부과됩니다.</p>
             </div>
           )}
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-            <p className="text-red-600 text-sm font-medium">⚠ {error}</p>
+          <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 12, padding: '12px 16px' }}>
+            <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 14, color: '#EF4444', fontWeight: 500 }}>⚠ {error}</p>
           </div>
         )}
       </div>
 
       {/* 하단 고정 버튼 */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 px-4 py-4">
-        <button
-          className="btn-primary w-full"
-          onClick={handleSubmit}
-          disabled={loading}
-        >
+      <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 448, background: 'rgba(10,10,11,0.95)', backdropFilter: 'blur(12px)', borderTop: '1px solid #2A2A32', padding: '12px 16px 20px', zIndex: 50 }}>
+        <button onClick={handleSubmit} disabled={loading} style={{ width: '100%', height: 52, background: loading ? '#2a2a2b' : '#c9f236', color: loading ? '#8A8A9A' : '#171e00', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 18, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', border: 'none', borderRadius: 12, cursor: loading ? 'default' : 'pointer', transition: 'all 0.2s' }}>
           {loading ? '생성 중...' : '스팟 생성하기'}
         </button>
       </div>
