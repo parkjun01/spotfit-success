@@ -62,9 +62,24 @@ export default function HomePage() {
   const [searchResults, setSearchResults] = useState<Region[]>([]);
   const [searching, setSearching] = useState(false);
   const [recentRegions, setRecentRegions] = useState<Region[]>([]);
+  const [spotCount, setSpotCount] = useState(0);
+
+  // 리스트뷰 검색
+  const [listSearch, setListSearch] = useState('');
+
+  // 지도뷰 검색
   const [mapSearch, setMapSearch] = useState('');
+  const [mapSearchResults, setMapSearchResults] = useState<Region[]>([]);
+  const [mapSearching, setMapSearching] = useState(false);
+  const [showMapSearchDrop, setShowMapSearchDrop] = useState(false);
+
+  // 지도뷰 필터 패널
+  const [showMapFilter, setShowMapFilter] = useState(false);
+  const [mapSport, setMapSport] = useState('');
+  const [mapRadius, setMapRadius] = useState(5000);
+
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [spotCount, setSpotCount] = useState(247);
+  const mapSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!localStorage.getItem('access_token') && !sessionStorage.getItem('access_token')) {
@@ -94,6 +109,11 @@ export default function HomePage() {
 
   useEffect(() => { if (region) loadSpots(); }, [region, selectedSport, radius]);
 
+  // 지도뷰 필터 변경 시 스팟 재로드
+  useEffect(() => {
+    if (viewMode === 'map' && region) loadMapSpots();
+  }, [mapSport, mapRadius]);
+
   const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
     try {
       const res = await fetch(`/api/reverse-geocode?lat=${lat}&lng=${lng}`);
@@ -111,10 +131,30 @@ export default function HomePage() {
       const data = await res.json();
       const list = data.data || [];
       setSpots(list);
-      setSpotCount(list.length || 247);
+      setSpotCount(list.length);
     } finally { setLoading(false); }
   };
 
+  const loadMapSpots = async () => {
+    if (!region) return;
+    try {
+      const params = new URLSearchParams({ lat: String(region.lat), lng: String(region.lng), radius: String(mapRadius), ...(mapSport && { sportId: mapSport }) });
+      const res = await fetch(`/api/spots?${params}`);
+      const data = await res.json();
+      setSpots(data.data || []);
+    } catch {}
+  };
+
+  // 리스트뷰 검색 필터
+  const filteredSpots = listSearch.trim()
+    ? spots.filter(s =>
+        s.title.toLowerCase().includes(listSearch.toLowerCase()) ||
+        s.sport_name.toLowerCase().includes(listSearch.toLowerCase()) ||
+        s.location_name.toLowerCase().includes(listSearch.toLowerCase())
+      )
+    : spots;
+
+  // 동네 시트 검색
   const handleSearch = (q: string) => {
     setSearchQuery(q);
     if (searchTimer.current) clearTimeout(searchTimer.current);
@@ -130,10 +170,39 @@ export default function HomePage() {
     }, 600);
   };
 
+  // 지도뷰 장소 검색
+  const handleMapSearch = (q: string) => {
+    setMapSearch(q);
+    if (mapSearchTimer.current) clearTimeout(mapSearchTimer.current);
+    if (!q.trim()) { setMapSearchResults([]); setShowMapSearchDrop(false); return; }
+    mapSearchTimer.current = setTimeout(async () => {
+      setMapSearching(true);
+      try {
+        const res = await fetch(`/api/geocode?address=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        if (data.success) {
+          setMapSearchResults([{ name: q, lat: data.data.lat, lng: data.data.lng }]);
+          setShowMapSearchDrop(true);
+        } else {
+          setMapSearchResults([]);
+          setShowMapSearchDrop(false);
+        }
+      } finally { setMapSearching(false); }
+    }, 600);
+  };
+
+  const selectMapLocation = (r: Region) => {
+    setRegion(r); saveRegion(r);
+    setMapSearch(r.name);
+    setShowMapSearchDrop(false);
+    setMapSearchResults([]);
+  };
+
   const selectRegion = (r: Region) => {
     setRegion(r); saveRegion(r); setRecentRegions(loadRecentRegions());
     setShowRegionSheet(false); setSearchQuery(''); setSearchResults([]);
   };
+
   const useCurrentLocation = () => {
     navigator.geolocation?.getCurrentPosition(
       pos => reverseGeocode(pos.coords.latitude, pos.coords.longitude).then(name =>
@@ -143,8 +212,17 @@ export default function HomePage() {
     );
   };
 
+  const switchToMap = () => {
+    setViewMode('map');
+    setMapSport(selectedSport);
+    setMapRadius(radius);
+  };
+
   // ── MAP VIEW ──────────────────────────────────────────────
   if (viewMode === 'map') {
+    // 지도뷰에서 필터된 스팟
+    const mapSpots = mapSport ? spots.filter(s => sports.find(sp => sp.id === mapSport)?.name === s.sport_name) : spots;
+
     return (
       <div style={{ height: '100dvh', background: '#0E0E0F', overflow: 'hidden', position: 'relative' }}>
 
@@ -152,36 +230,113 @@ export default function HomePage() {
         <header style={{
           position: 'fixed', top: 0, left: 0, right: 0, zIndex: 40, height: 64,
           display: 'flex', alignItems: 'center', gap: 8, padding: '0 16px',
-          background: 'rgba(19,19,20,0.92)', backdropFilter: 'blur(12px)',
+          background: 'rgba(19,19,20,0.96)', backdropFilter: 'blur(12px)',
           borderBottom: '1px solid #2A2A32',
         }}>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', background: '#141416', border: '1px solid #2A2A32', borderRadius: 16, padding: '0 12px', height: 40, gap: 8 }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 20, color: '#c5c9ae', flexShrink: 0 }}>search</span>
-            <input
-              style={{ background: 'transparent', border: 'none', outline: 'none', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 600, color: '#e5e2e3', width: '100%' }}
-              placeholder="Search spots nearby…"
-              value={mapSearch}
-              onChange={e => setMapSearch(e.target.value)}
-            />
+          {/* 리스트뷰로 돌아가기 */}
+          <button onClick={() => setViewMode('list')} style={{ width: 40, height: 40, background: '#141416', border: '1px solid #2A2A32', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8A8A9A', cursor: 'pointer', flexShrink: 0 }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 22 }}>arrow_back</span>
+          </button>
+
+          {/* 검색창 */}
+          <div style={{ flex: 1, position: 'relative' }}>
+            <div style={{ display: 'flex', alignItems: 'center', background: '#141416', border: '1px solid #2A2A32', borderRadius: 16, padding: '0 12px', height: 40, gap: 8 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 20, color: '#c5c9ae', flexShrink: 0 }}>search</span>
+              <input
+                style={{ background: 'transparent', border: 'none', outline: 'none', fontFamily: 'DM Sans, sans-serif', fontSize: 14, color: '#e5e2e3', width: '100%' }}
+                placeholder="장소 검색 (예: 강남구, 홍대)…"
+                value={mapSearch}
+                onChange={e => handleMapSearch(e.target.value)}
+                onFocus={() => { if (mapSearchResults.length > 0) setShowMapSearchDrop(true); }}
+              />
+              {mapSearching && <div style={{ width: 14, height: 14, border: '2px solid #c9f236', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />}
+              {mapSearch && (
+                <button onClick={() => { setMapSearch(''); setMapSearchResults([]); setShowMapSearchDrop(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8A8A9A', display: 'flex', padding: 0, flexShrink: 0 }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+                </button>
+              )}
+            </div>
+
+            {/* 검색 결과 드롭다운 */}
+            {showMapSearchDrop && mapSearchResults.length > 0 && (
+              <div style={{ position: 'absolute', top: 46, left: 0, right: 0, background: '#141416', border: '1px solid #2A2A32', borderRadius: 12, zIndex: 100, overflow: 'hidden' }}>
+                {mapSearchResults.map(r => (
+                  <button key={r.name} onClick={() => selectMapLocation(r)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#1E1E22')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#c9f236' }}>location_on</span>
+                    <div>
+                      <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, color: '#e5e2e3', fontSize: 14 }}>{r.name}</p>
+                      <p style={{ fontSize: 11, color: '#8A8A9A' }}>이 위치로 지도 이동</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-          <button style={{ width: 40, height: 40, background: '#141416', border: '1px solid #2A2A32', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c9f236', cursor: 'pointer', flexShrink: 0 }}>
+
+          {/* 필터 버튼 */}
+          <button
+            onClick={() => setShowMapFilter(v => !v)}
+            style={{ width: 40, height: 40, background: showMapFilter ? '#c9f236' : '#141416', border: `1px solid ${showMapFilter ? '#c9f236' : '#2A2A32'}`, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', color: showMapFilter ? '#171e00' : '#c9f236', cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s' }}
+          >
             <span className="material-symbols-outlined" style={{ fontSize: 22 }}>tune</span>
           </button>
         </header>
 
-        {/* Full-screen Kakao Map — explicit height required for Kakao SDK */}
+        {/* 지도뷰 필터 패널 */}
+        {showMapFilter && (
+          <div style={{ position: 'fixed', top: 64, left: 0, right: 0, zIndex: 39, background: 'rgba(19,19,20,0.98)', backdropFilter: 'blur(12px)', borderBottom: '1px solid #2A2A32', padding: '12px 16px 14px' }}>
+            {/* 종목 필터 */}
+            <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8A8A9A', marginBottom: 8 }}>종목</p>
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', marginBottom: 12 }} className="no-scrollbar">
+              {[{ id: '', name: 'ALL' }, ...sports].map(s => (
+                <button key={s.id} onClick={() => { setMapSport(s.id); setSelectedSport(s.id); }} style={{
+                  flexShrink: 0, padding: '6px 14px', borderRadius: 999,
+                  fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, textTransform: 'uppercase',
+                  background: mapSport === s.id ? '#c9f236' : '#1E1E22',
+                  color: mapSport === s.id ? '#171e00' : '#8A8A9A',
+                  border: `1px solid ${mapSport === s.id ? '#c9f236' : '#2A2A32'}`,
+                  cursor: 'pointer', transition: 'all 0.2s',
+                }}>{s.name}</button>
+              ))}
+            </div>
+            {/* 반경 필터 */}
+            <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8A8A9A', marginBottom: 8 }}>반경</p>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {RADIUS_OPTIONS.map(opt => (
+                <button key={opt.value} onClick={() => { setMapRadius(opt.value); setRadius(opt.value); }} style={{
+                  flexShrink: 0, padding: '6px 14px', borderRadius: 999,
+                  fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, textTransform: 'uppercase',
+                  background: mapRadius === opt.value ? '#c9f236' : '#1E1E22',
+                  color: mapRadius === opt.value ? '#171e00' : '#8A8A9A',
+                  border: `1px solid ${mapRadius === opt.value ? '#c9f236' : '#2A2A32'}`,
+                  cursor: 'pointer', transition: 'all 0.2s',
+                }}>{opt.label}</button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Full-screen Kakao Map */}
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, width: '100vw', height: '100dvh' }}>
           <SpotMap
-            spots={spots}
+            spots={mapSpots}
             center={region ? { lat: region.lat, lng: region.lng } : undefined}
             onSpotClick={(spot) => router.push(`/spots/${spot.id}`)}
           />
         </div>
 
+        {/* 스팟 수 배지 */}
+        <div style={{ position: 'fixed', top: showMapFilter ? 180 : 76, left: 16, zIndex: 38, background: 'rgba(20,20,22,0.9)', border: '1px solid #2A2A32', borderRadius: 20, padding: '4px 12px', display: 'flex', alignItems: 'center', gap: 6, transition: 'top 0.2s' }}>
+          <div style={{ width: 6, height: 6, background: '#c9f236', borderRadius: '50%' }} />
+          <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, color: '#e5e2e3' }}>{mapSpots.length} spots</span>
+        </div>
+
         {/* Bottom Spot Preview Cards */}
         <div style={{ position: 'fixed', bottom: 'calc(68px + 12px)', left: 0, right: 0, zIndex: 40, padding: '0 16px 8px' }}>
           <div style={{ display: 'flex', gap: 16, overflowX: 'auto', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch', paddingBottom: 4 }} className="no-scrollbar">
-            {spots.slice(0, 5).map((spot, i) => {
+            {mapSpots.slice(0, 5).map((spot) => {
               const isFull = spot.status === 'full';
               const isClosing = !isFull && spot.current_participants / spot.max_participants >= 0.8;
               const mannerPct = Math.min(100, ((spot.host_manner_score || 35) / 50) * 100);
@@ -195,7 +350,6 @@ export default function HomePage() {
                   onMouseEnter={e => (e.currentTarget.style.borderColor = '#c9f236')}
                   onMouseLeave={e => (e.currentTarget.style.borderColor = '#2A2A32')}
                 >
-                  {/* Top Row */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                     <span style={{ padding: '4px 10px', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', borderRadius: 4, background: isFull ? '#3E3E4A' : isClosing ? '#fd591e' : '#c9f236', color: isFull ? '#8A8A9A' : '#171e00' }}>
                       {isFull ? '마감' : isClosing ? 'Closing Soon' : 'Recruiting'}
@@ -207,11 +361,7 @@ export default function HomePage() {
                       </div>
                     )}
                   </div>
-                  {/* Title */}
-                  <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 20, fontWeight: 700, textTransform: 'uppercase', color: '#ffffef', marginBottom: 8, lineHeight: 1.15 }}>
-                    {spot.title}
-                  </p>
-                  {/* Meta */}
+                  <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 20, fontWeight: 700, textTransform: 'uppercase', color: '#ffffef', marginBottom: 8, lineHeight: 1.15 }}>{spot.title}</p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: '#c5c9ae', fontSize: 12, marginBottom: 12 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       <span className="material-symbols-outlined" style={{ fontSize: 16 }}>schedule</span>
@@ -220,11 +370,11 @@ export default function HomePage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       <span className="material-symbols-outlined" style={{ fontSize: 16 }}>group</span>
                       <span style={{ color: isFull ? '#fd591e' : '#c9f236', fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700 }}>
-                        {spot.current_participants} / {spot.max_participants} members
+                        {spot.current_participants}/{spot.max_participants}
                       </span>
                     </div>
+                    <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, color: '#8A8A9A', fontWeight: 600, textTransform: 'uppercase' }}>{spot.sport_name}</span>
                   </div>
-                  {/* Manner Score */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                       <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#c5c9ae' }}>Manner Score</span>
@@ -237,7 +387,7 @@ export default function HomePage() {
                 </div>
               );
             })}
-            {spots.length === 0 && !loading && (
+            {mapSpots.length === 0 && (
               <div style={{ minWidth: '88%', background: '#141416', border: '1px solid #2A2A32', borderRadius: 16, padding: 24, textAlign: 'center', color: '#8A8A9A', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14 }}>
                 주변에 스팟이 없습니다
               </div>
@@ -255,7 +405,6 @@ export default function HomePage() {
           <span className="material-symbols-outlined" style={{ fontSize: 32, color: '#171e00', fontWeight: 600 }}>add</span>
         </Link>
 
-        {/* Bottom Nav */}
         <BottomNav active="map" onListClick={() => setViewMode('list')} />
       </div>
     );
@@ -265,7 +414,6 @@ export default function HomePage() {
   return (
     <div className="flex flex-col h-screen" style={{ background: '#131314' }}>
 
-      {/* Top Nav — SPOTFIT logo + notifications + avatar (index.html) */}
       <header style={{
         position: 'sticky', top: 0, zIndex: 40, height: 64,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -275,7 +423,7 @@ export default function HomePage() {
       }}>
         <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, color: '#c9f236', letterSpacing: '0.05em', textTransform: 'uppercase' }}>SPOTFIT</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Link href="/mypage/notifications" style={{ width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e5e2e3', background: 'transparent', transition: 'background 0.2s' }}
+          <Link href="/mypage/notifications" style={{ width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e5e2e3', background: 'transparent' }}
             onMouseEnter={e => (e.currentTarget.style.background = '#1E1E22')}
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
             <span className="material-symbols-outlined" style={{ fontSize: 24 }}>notifications</span>
@@ -288,7 +436,6 @@ export default function HomePage() {
 
       <main className="flex-1 overflow-y-auto">
 
-        {/* Hero — greeting text clickable → region sheet (index.html) */}
         <section style={{ background: 'linear-gradient(160deg,#1a1f00 0%,#131314 55%)', padding: '40px 16px 36px', position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: -40, right: -40, width: 260, height: 260, background: 'radial-gradient(circle,rgba(200,241,53,0.18) 0%,transparent 70%)', pointerEvents: 'none' }} />
           <button onClick={() => setShowRegionSheet(true)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: 6 }}>
@@ -305,25 +452,36 @@ export default function HomePage() {
           </p>
         </section>
 
-        {/* Search Bar */}
+        {/* 검색창 — 실제 필터 연동 */}
         <div style={{ padding: '16px 16px 0' }}>
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
             <span className="material-symbols-outlined" style={{ position: 'absolute', left: 14, color: '#8A8A9A', fontSize: 22 }}>search</span>
             <input
               style={{ width: '100%', background: '#1E1E22', border: '1px solid #2A2A32', borderRadius: 999, padding: '13px 48px 13px 46px', fontFamily: 'DM Sans, sans-serif', fontSize: 14, color: '#e5e2e3', outline: 'none', transition: 'border-color 0.2s' }}
-              placeholder="종목, 지역, 크루 검색…"
+              placeholder="종목, 지역, 스팟 이름 검색…"
+              value={listSearch}
+              onChange={e => setListSearch(e.target.value)}
               onFocus={e => (e.target.style.borderColor = '#c9f236')}
               onBlur={e => (e.target.style.borderColor = '#2A2A32')}
             />
-            <button style={{ position: 'absolute', right: 6, width: 36, height: 36, background: '#c9f236', borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#171e00', border: 'none', cursor: 'pointer', transition: 'transform 0.15s' }}
-              onMouseDown={e => (e.currentTarget.style.transform = 'scale(0.88)')}
-              onMouseUp={e => (e.currentTarget.style.transform = '')}>
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>tune</span>
-            </button>
+            {listSearch ? (
+              <button onClick={() => setListSearch('')} style={{ position: 'absolute', right: 6, width: 36, height: 36, background: '#2A2A32', borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8A8A9A', border: 'none', cursor: 'pointer' }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+              </button>
+            ) : (
+              <button onClick={switchToMap} style={{ position: 'absolute', right: 6, width: 36, height: 36, background: '#c9f236', borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#171e00', border: 'none', cursor: 'pointer' }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>map</span>
+              </button>
+            )}
           </div>
+          {listSearch && (
+            <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, color: '#8A8A9A', marginTop: 6, paddingLeft: 4 }}>
+              "{listSearch}" 검색 결과 {filteredSpots.length}개
+            </p>
+          )}
         </div>
 
-        {/* Sport Category Pills (icon + label) */}
+        {/* 종목 필터 */}
         <nav style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '12px 16px' }} className="no-scrollbar">
           {[
             { id: '', name: 'ALL', icon: 'bolt' },
@@ -349,10 +507,10 @@ export default function HomePage() {
           })}
         </nav>
 
-        {/* Quick Stats Banner */}
+        {/* 통계 배너 */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, padding: '0 16px' }}>
           {[
-            { value: String(spotCount), label: 'Active Spots' },
+            { value: String(spotCount || spots.length), label: 'Active Spots' },
             { value: '1.2K', label: 'Members' },
             { value: '98%', label: 'Match Rate' },
           ].map(({ value, label }) => (
@@ -363,7 +521,7 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* Radius filter */}
+        {/* 반경 필터 */}
         <div style={{ display: 'flex', gap: 6, overflowX: 'auto', padding: '12px 16px 0' }} className="no-scrollbar">
           {RADIUS_OPTIONS.map(opt => (
             <button key={opt.value} onClick={() => setRadius(opt.value)} style={{
@@ -377,12 +535,14 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* Spots Section */}
+        {/* 스팟 목록 */}
         <div style={{ padding: '16px 16px 96px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <h2 style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 22, fontWeight: 700, color: '#e5e2e3' }}>🔥 Hot Spots</h2>
-            <button onClick={() => setViewMode('map')} style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#c9f236', background: 'none', border: 'none', cursor: 'pointer' }}>
-              See All →
+            <h2 style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 22, fontWeight: 700, color: '#e5e2e3' }}>
+              {listSearch ? `🔍 "${listSearch}"` : '🔥 Hot Spots'}
+            </h2>
+            <button onClick={switchToMap} style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#c9f236', background: 'none', border: 'none', cursor: 'pointer' }}>
+              지도뷰 →
             </button>
           </div>
 
@@ -390,19 +550,25 @@ export default function HomePage() {
             <div key={i} style={{ background: '#1E1E22', border: '1px solid #2A2A32', borderRadius: 16, height: 200, marginBottom: 12 }} />
           ))}
 
-          {!loading && spots.length === 0 && (
+          {!loading && filteredSpots.length === 0 && (
             <div style={{ textAlign: 'center', padding: '64px 0' }}>
-              <p style={{ fontSize: 48 }}>🏟</p>
-              <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 20, fontWeight: 700, color: '#e5e2e3', marginTop: 12 }}>{region?.name}에 스팟이 없어요</p>
-              <p style={{ fontSize: 14, color: '#8A8A9A', marginTop: 6 }}>첫 번째 스팟을 만들어보세요!</p>
-              <Link href="/spots/new" style={{ display: 'inline-block', marginTop: 16, padding: '10px 24px', background: '#c9f236', color: '#171e00', borderRadius: 8, fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, fontSize: 14, textTransform: 'uppercase' }}>
-                스팟 만들기
-              </Link>
+              <p style={{ fontSize: 48 }}>{listSearch ? '🔍' : '🏟'}</p>
+              <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 20, fontWeight: 700, color: '#e5e2e3', marginTop: 12 }}>
+                {listSearch ? `"${listSearch}" 검색 결과 없음` : `${region?.name}에 스팟이 없어요`}
+              </p>
+              <p style={{ fontSize: 14, color: '#8A8A9A', marginTop: 6 }}>
+                {listSearch ? '다른 키워드로 검색해보세요' : '첫 번째 스팟을 만들어보세요!'}
+              </p>
+              {!listSearch && (
+                <Link href="/spots/new" style={{ display: 'inline-block', marginTop: 16, padding: '10px 24px', background: '#c9f236', color: '#171e00', borderRadius: 8, fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, fontSize: 14, textTransform: 'uppercase' }}>
+                  스팟 만들기
+                </Link>
+              )}
             </div>
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {spots.map(spot => {
+            {filteredSpots.map(spot => {
               const isFull = spot.status === 'full';
               const fillPct = Math.min(100, Math.round((spot.current_participants / spot.max_participants) * 100));
               const isClosing = !isFull && fillPct >= 80;
@@ -462,25 +628,18 @@ export default function HomePage() {
         </div>
       </main>
 
-      {/* FAB — map icon (지도에서 스팟 찾기) in list view, per index.html */}
-      <button onClick={() => setViewMode('map')} className="lime-glow" style={{
+      <button onClick={switchToMap} className="lime-glow" style={{
         position: 'fixed', bottom: 'calc(68px + 16px)', right: 20, zIndex: 45,
         width: 56, height: 56, borderRadius: '50%', background: '#c9f236',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         boxShadow: '0 4px 24px rgba(201,242,54,0.35)', border: 'none', cursor: 'pointer',
-        transition: 'transform 0.2s, box-shadow 0.2s',
-      }}
-        aria-label="지도에서 스팟 찾기"
-        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 6px 32px rgba(201,242,54,0.5)'; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 24px rgba(201,242,54,0.35)'; }}
-      >
+      }}>
         <span className="material-symbols-outlined" style={{ fontSize: 28, color: '#171e00' }}>map</span>
       </button>
 
-      {/* Bottom Nav */}
-      <BottomNav active="home" onMapClick={() => setViewMode('map')} />
+      <BottomNav active="home" onMapClick={switchToMap} />
 
-      {/* Region Sheet */}
+      {/* 동네 선택 시트 */}
       {showRegionSheet && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)' }} onClick={() => setShowRegionSheet(false)} />
