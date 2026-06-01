@@ -30,6 +30,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="max-w-md mx-auto min-h-screen" style={{ background: '#131314' }}>
         {children}
         <Script
+          src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=41f7052cc54daa806a96d14075ab4d57"
+          strategy="beforeInteractive"
+        />
+        <Script
           src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"
           strategy="lazyOnload"
         />
