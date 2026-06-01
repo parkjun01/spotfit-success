@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface Spot {
@@ -36,18 +36,23 @@ const KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || '405d8f53f98c26fe032e16aef77
 
 export default function SpotMap({ spots, center, onSpotClick }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapRef2 = useRef<any>(null);        // kakao map instance
+  const mapRef2 = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const overlayRef = useRef<any>(null);
   const router = useRouter();
+  const [mapError, setMapError] = useState<string | null>(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
 
   useEffect(() => {
     if (!mapRef.current) return;
+    setMapError(null);
 
     // 1. SDK 스크립트 주입
+    const scriptSrc = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KEY}`;
     if (!document.querySelector('script[src*="dapi.kakao.com/v2/maps"]')) {
       const s = document.createElement('script');
-      s.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KEY}`;
+      s.src = scriptSrc;
+      s.onerror = () => setMapError(`SDK 로드 실패 — 키: ${KEY.slice(0,8)}... | 도메인 등록 확인 필요`);
       document.head.appendChild(s);
     }
 
@@ -55,37 +60,45 @@ export default function SpotMap({ spots, center, onSpotClick }: Props) {
     const lng = center?.lng ?? 126.9780;
     let done = false;
 
-    // 2. kakao.maps 준비될 때까지 폴링
     const init = () => {
       if (done || !mapRef.current) return;
       done = true;
-      const kakao = (window as any).kakao;
+      try {
+        const kakao = (window as any).kakao;
+        if (!mapRef2.current) {
+          mapRef2.current = new kakao.maps.Map(mapRef.current, {
+            center: new kakao.maps.LatLng(lat, lng),
+            level: 7,
+          });
+        } else {
+          mapRef2.current.setCenter(new kakao.maps.LatLng(lat, lng));
+        }
+        setMapLoaded(true);
 
-      // 지도 초기화 또는 센터 업데이트
-      if (!mapRef2.current) {
-        mapRef2.current = new kakao.maps.Map(mapRef.current, {
-          center: new kakao.maps.LatLng(lat, lng),
-          level: 7,
-        });
-      } else {
-        mapRef2.current.setCenter(new kakao.maps.LatLng(lat, lng));
-      }
-
-      // 현재 위치 펄스
-      if (overlayRef.current) overlayRef.current.setMap(null);
-      if (center) {
-        overlayRef.current = new kakao.maps.CustomOverlay({
-          position: new kakao.maps.LatLng(lat, lng),
-          content: PULSE,
-          zIndex: 15,
-        });
-        overlayRef.current.setMap(mapRef2.current);
+        if (overlayRef.current) overlayRef.current.setMap(null);
+        if (center) {
+          overlayRef.current = new kakao.maps.CustomOverlay({
+            position: new kakao.maps.LatLng(lat, lng),
+            content: PULSE,
+            zIndex: 15,
+          });
+          overlayRef.current.setMap(mapRef2.current);
+        }
+      } catch (e: any) {
+        setMapError(`지도 초기화 오류: ${e?.message || String(e)}`);
       }
     };
 
     if ((window as any).kakao?.maps) { init(); return; }
+
+    let elapsed = 0;
     const t = setInterval(() => {
-      if ((window as any).kakao?.maps) { clearInterval(t); init(); }
+      elapsed += 150;
+      if ((window as any).kakao?.maps) { clearInterval(t); init(); return; }
+      if (elapsed >= 10000) {
+        clearInterval(t);
+        setMapError(`SDK 로드 타임아웃 (10초) — 키: ${KEY} | 카카오 개발자 콘솔에서 https://spotfit-success.vercel.app 도메인 등록 확인`);
+      }
     }, 150);
     return () => clearInterval(t);
   }, [center?.lat, center?.lng]);
@@ -120,6 +133,26 @@ export default function SpotMap({ spots, center, onSpotClick }: Props) {
   }, [spots, mapRef2.current]);
 
   return (
-    <div ref={mapRef} style={{ width: '100%', height: '100%', minHeight: '100vh' }} />
+    <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: '100vh' }}>
+      <div ref={mapRef} style={{ width: '100%', height: '100%', minHeight: '100vh' }} />
+      {mapError && (
+        <div style={{
+          position: 'absolute', top: 16, left: 16, right: 16, zIndex: 999,
+          background: 'rgba(220,38,38,0.95)', color: '#fff', borderRadius: 10,
+          padding: '12px 16px', fontSize: 13, lineHeight: 1.5,
+          border: '1px solid #f87171', wordBreak: 'break-all',
+        }}>
+          🗺️ 지도 오류<br />{mapError}
+        </div>
+      )}
+      {!mapLoaded && !mapError && (
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+          color: '#8A8A9A', fontSize: 14, textAlign: 'center', pointerEvents: 'none',
+        }}>
+          지도 로딩 중...
+        </div>
+      )}
+    </div>
   );
 }
