@@ -10,7 +10,7 @@ function loadKakaoSDK(): Promise<void> {
       setTimeout(() => { clearInterval(wait); reject(new Error('timeout')); }, 10000);
       return;
     }
-    const appkey = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
+    const appkey = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || '405d8f53f98c26fe032e16aef77ee8d7';
     if (!appkey) { reject(new Error('appkey missing')); return; }
     const s = document.createElement('script');
     s.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${appkey}&autoload=false`;

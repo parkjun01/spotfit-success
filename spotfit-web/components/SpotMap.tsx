@@ -55,7 +55,7 @@ function loadKakaoSDK(): Promise<void> {
       return;
     }
 
-    const appkey = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
+    const appkey = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || '405d8f53f98c26fe032e16aef77ee8d7';
     if (!appkey) { reject(new Error('NEXT_PUBLIC_KAKAO_JS_KEY is not set')); return; }
 
     const script = document.createElement('script');
