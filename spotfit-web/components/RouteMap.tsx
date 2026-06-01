@@ -9,7 +9,7 @@ interface Props {
   duration: number;
 }
 
-const KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || '405d8f53f98c26fe032e16aef77ee8d7';
+const KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || '41f7052cc54daa806a96d14075ab4d57';
 
 function dotSvg(color: string) {
   return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(

@@ -32,7 +32,7 @@ function markerSvg(color: string, cur: number, max: number) {
 
 const PULSE = `<div style="position:relative;width:32px;height:32px;display:flex;align-items:center;justify-content:center;"><div style="position:absolute;width:32px;height:32px;border-radius:50%;background:rgba(201,242,54,0.35);animation:pulsering 2s ease-out infinite;"></div><div style="width:16px;height:16px;background:#c9f236;border-radius:50%;border:2.5px solid #fff;box-shadow:0 0 8px rgba(201,242,54,0.6);position:relative;z-index:1;"></div></div>`;
 
-const KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || '405d8f53f98c26fe032e16aef77ee8d7';
+const KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || '41f7052cc54daa806a96d14075ab4d57';
 
 let kakaoLoadPromise: Promise<void> | null = null;
 
