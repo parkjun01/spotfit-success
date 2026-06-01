@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import './globals.css';
 
@@ -6,8 +6,13 @@ export const metadata: Metadata = {
   title: 'SPOTFIT — 운동 파티 매칭',
   description: '도심 속 운동 메이트를 찾아라. SPOTFIT으로 근처 스팟을 발견하고 함께 땀 흘릴 크루를 만나세요.',
   manifest: '/manifest.json',
+};
+
+export const viewport: Viewport = {
   themeColor: '#131314',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -23,10 +28,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="max-w-md mx-auto min-h-screen" style={{ background: '#131314' }}>
         {children}
-        <Script
-          src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_JS_KEY}`}
-          strategy="afterInteractive"
-        />
         <Script
           src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"
           strategy="lazyOnload"
