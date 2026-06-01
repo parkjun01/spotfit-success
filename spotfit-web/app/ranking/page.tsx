@@ -139,20 +139,32 @@ export default function RankingPage() {
         ))}
       </div>
 
-      {/* Sport Filter */}
+      {/* Sport Filter — with icons (ranking.html) */}
       <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '12px 16px' }} className="no-scrollbar">
-        {[{ id: '', name: 'ALL' }, ...sports.slice(0, 6)].map(s => (
-          <button key={s.id} onClick={() => setSportId(s.id)} style={{
-            flexShrink: 0, padding: '5px 14px', borderRadius: 999,
-            fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, textTransform: 'uppercase',
-            background: sportId === s.id ? '#c9f236' : '#1E1E22',
-            color: sportId === s.id ? '#171e00' : '#8A8A9A',
-            border: `1px solid ${sportId === s.id ? '#c9f236' : '#2A2A32'}`,
-            cursor: 'pointer', transition: 'all 0.2s',
-          }}>
-            {s.name}
-          </button>
-        ))}
+        {[
+          { id: '', name: 'ALL', icon: 'bolt' },
+          { id: 'basketball', name: 'Hoops', icon: 'sports_basketball' },
+          { id: 'soccer', name: 'Soccer', icon: 'sports_soccer' },
+          { id: 'gym', name: 'Gym', icon: 'fitness_center' },
+          { id: 'tennis', name: 'Tennis', icon: 'sports_tennis' },
+          ...sports.slice(0, 3).map(s => ({ id: s.id, name: s.name, icon: 'sports' })),
+        ].map(s => {
+          const active = sportId === s.id;
+          return (
+            <button key={s.id} onClick={() => setSportId(s.id)} style={{
+              flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4,
+              padding: '5px 14px', borderRadius: 999,
+              fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, textTransform: 'uppercase',
+              background: active ? '#c9f236' : '#1E1E22',
+              color: active ? '#171e00' : '#8A8A9A',
+              border: `1px solid ${active ? '#c9f236' : '#2A2A32'}`,
+              cursor: 'pointer', transition: 'all 0.2s',
+            }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{s.icon}</span>
+              {s.name}
+            </button>
+          );
+        })}
       </div>
 
       {/* Rank List */}
@@ -188,7 +200,13 @@ export default function RankingPage() {
                 <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 15, fontWeight: 700, color: '#e5e2e3', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.nickname}</p>
                 {r.subscription_status === 'premium' && <span style={{ fontSize: 12 }}>👑</span>}
               </div>
-              <p style={{ fontSize: 12, color: '#8A8A9A' }}>스팟 {r.spotCount}회 · 활동 {r.activityScore}점</p>
+              <p style={{ fontSize: 12, color: '#8A8A9A', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>스팟 {r.spotCount}회</span>
+                <span style={{ width: 3, height: 3, borderRadius: '50%', background: '#2A2A32', display: 'inline-block' }} />
+                <span>{r.activityScore}점</span>
+                {/* 순위 변동 — ranking.html: ▲▼— indicators */}
+                <span style={{ fontSize: 11, color: '#8A8A9A' }}>— 0</span>
+              </p>
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
               <div style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 24, color: '#c9f236', lineHeight: 1 }}>{r.activityScore || Math.round(r.manner_score * 100)}</div>

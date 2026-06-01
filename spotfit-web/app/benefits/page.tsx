@@ -11,7 +11,14 @@ const BENEFITS = [
   { id: 6, category: 'GYM', brand: '애니타임피트니스', logo: '🏃', title: '1일 무료 이용권', desc: '애니타임피트니스 전 지점 1일 무료 입장. 월 2회 한정.', discount: '무료', condition: '스팟 5회 이상 참여', borderColor: '#fd591e' },
 ];
 
-const CATEGORIES = ['ALL', 'GYM', 'SUPPS', 'GEAR', 'RECOVERY', 'FOOD'];
+const CATEGORIES: { key: string; icon?: string }[] = [
+  { key: 'ALL' },
+  { key: 'GYM', icon: 'fitness_center' },
+  { key: 'SUPPS', icon: 'medication' },
+  { key: 'GEAR', icon: 'checkroom' },
+  { key: 'RECOVERY', icon: 'spa' },
+  { key: 'FOOD', icon: 'restaurant' },
+];
 
 const NAV = [
   { href: '/', icon: 'home', label: 'Home' },
@@ -112,18 +119,25 @@ export default function BenefitsPage() {
         </Link>
       </div>
 
-      {/* Category Filter */}
+      {/* Category Filter — with icons (benefits.html) */}
       <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '12px 16px', borderBottom: '1px solid #2A2A32' }} className="no-scrollbar">
-        {CATEGORIES.map(c => (
-          <button key={c} onClick={() => setCategory(c)} style={{
-            flexShrink: 0, padding: '6px 16px', borderRadius: 999,
-            fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, textTransform: 'uppercase',
-            background: category === c ? '#c9f236' : '#1E1E22',
-            color: category === c ? '#171e00' : '#8A8A9A',
-            border: `1px solid ${category === c ? '#c9f236' : '#2A2A32'}`,
-            cursor: 'pointer', transition: 'all 0.2s',
-          }}>{c}</button>
-        ))}
+        {CATEGORIES.map(c => {
+          const active = category === c.key;
+          return (
+            <button key={c.key} onClick={() => setCategory(c.key)} style={{
+              flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4,
+              padding: '6px 16px', borderRadius: 999,
+              fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, textTransform: 'uppercase',
+              background: active ? '#c9f236' : '#1E1E22',
+              color: active ? '#171e00' : '#8A8A9A',
+              border: `1px solid ${active ? '#c9f236' : '#2A2A32'}`,
+              cursor: 'pointer', transition: 'all 0.2s',
+            }}>
+              {c.icon && <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{c.icon}</span>}
+              {c.key}
+            </button>
+          );
+        })}
       </div>
 
       {/* Benefit Cards */}

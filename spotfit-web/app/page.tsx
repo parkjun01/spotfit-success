@@ -265,7 +265,7 @@ export default function HomePage() {
   return (
     <div className="flex flex-col h-screen" style={{ background: '#131314' }}>
 
-      {/* Top Nav */}
+      {/* Top Nav — SPOTFIT logo + notifications + avatar (index.html) */}
       <header style={{
         position: 'sticky', top: 0, zIndex: 40, height: 64,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -273,16 +273,13 @@ export default function HomePage() {
         background: 'rgba(19,19,20,0.95)', backdropFilter: 'blur(12px)',
         borderBottom: '1px solid #2A2A32',
       }}>
-        <button onClick={() => setShowRegionSheet(true)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 24, color: '#c9f236', letterSpacing: '0.05em' }}>
-            {region?.name || 'SPOTFIT'}
-          </span>
-          <span className="material-symbols-outlined" style={{ color: '#8A8A9A', fontSize: 20 }}>expand_more</span>
-        </button>
+        <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, color: '#c9f236', letterSpacing: '0.05em', textTransform: 'uppercase' }}>SPOTFIT</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button onClick={() => setViewMode('map')} style={{ width: 36, height: 36, borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c9f236', background: 'rgba(201,242,54,0.1)' }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>map</span>
-          </button>
+          <Link href="/mypage/notifications" style={{ width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e5e2e3', background: 'transparent', transition: 'background 0.2s' }}
+            onMouseEnter={e => (e.currentTarget.style.background = '#1E1E22')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+            <span className="material-symbols-outlined" style={{ fontSize: 24 }}>notifications</span>
+          </Link>
           <Link href="/mypage" style={{ width: 34, height: 34, borderRadius: '50%', overflow: 'hidden', border: '2px solid #c9f236', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1E1E22' }}>
             <span className="material-symbols-outlined" style={{ fontSize: 20, color: '#8A8A9A' }}>person</span>
           </Link>
@@ -291,12 +288,15 @@ export default function HomePage() {
 
       <main className="flex-1 overflow-y-auto">
 
-        {/* Hero */}
-        <section style={{ background: 'linear-gradient(160deg,#1a1f00 0%,#131314 55%)', padding: '32px 16px 24px', position: 'relative', overflow: 'hidden' }}>
+        {/* Hero — greeting text clickable → region sheet (index.html) */}
+        <section style={{ background: 'linear-gradient(160deg,#1a1f00 0%,#131314 55%)', padding: '40px 16px 36px', position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: -40, right: -40, width: 260, height: 260, background: 'radial-gradient(circle,rgba(200,241,53,0.18) 0%,transparent 70%)', pointerEvents: 'none' }} />
-          <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#c5c9ae', marginBottom: 6 }}>
-            {region?.name || '서울'} · 오늘
-          </p>
+          <button onClick={() => setShowRegionSheet(true)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: 6 }}>
+            <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#c5c9ae' }}>
+              {region?.name || '서울'} · 오늘
+            </p>
+            <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#8A8A9A' }}>expand_more</span>
+          </button>
           <h1 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 52, lineHeight: 0.95, color: '#c9f236', textTransform: 'uppercase', letterSpacing: '0.02em', marginBottom: 12 }}>
             FIND<br/><span style={{ color: '#e5e2e3' }}>YOUR</span><br/>SPOT
           </h1>
@@ -462,15 +462,20 @@ export default function HomePage() {
         </div>
       </main>
 
-      {/* FAB */}
-      <Link href="/spots/new" className="lime-glow" style={{
+      {/* FAB — map icon (지도에서 스팟 찾기) in list view, per index.html */}
+      <button onClick={() => setViewMode('map')} className="lime-glow" style={{
         position: 'fixed', bottom: 'calc(68px + 16px)', right: 20, zIndex: 45,
         width: 56, height: 56, borderRadius: '50%', background: '#c9f236',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: '0 4px 24px rgba(201,242,54,0.35)',
-      }}>
-        <span className="material-symbols-outlined" style={{ fontSize: 28, color: '#171e00', fontWeight: 700 }}>add</span>
-      </Link>
+        boxShadow: '0 4px 24px rgba(201,242,54,0.35)', border: 'none', cursor: 'pointer',
+        transition: 'transform 0.2s, box-shadow 0.2s',
+      }}
+        aria-label="지도에서 스팟 찾기"
+        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 6px 32px rgba(201,242,54,0.5)'; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 24px rgba(201,242,54,0.35)'; }}
+      >
+        <span className="material-symbols-outlined" style={{ fontSize: 28, color: '#171e00' }}>map</span>
+      </button>
 
       {/* Bottom Nav */}
       <BottomNav active="home" onMapClick={() => setViewMode('map')} />

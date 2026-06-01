@@ -32,6 +32,7 @@ export default function SpotDetailPage() {
   const [spot, setSpot] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
+  const [joined, setJoined] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [token, setToken] = useState<string | null>(null);
@@ -60,8 +61,8 @@ export default function SpotDetailPage() {
       const res = await fetch(`/api/spots/${id}/join`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       if (!data.success) { alert(data.message); return; }
-      alert('참여 완료! 🎉');
-      router.push(`/spots/${id}/chat`);
+      setJoined(true);
+      setTimeout(() => router.push(`/spots/${id}/chat`), 1200);
     } finally { setJoining(false); }
   };
 
@@ -180,13 +181,11 @@ export default function SpotDetailPage() {
           <span className="material-symbols-outlined" style={{ fontSize: 24 }}>arrow_back</span>
         </button>
         <h1 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 20, color: '#c9f236', textTransform: 'uppercase', letterSpacing: '0.06em' }}>SPOT DETAILS</h1>
-        {isHost && isActive ? (
-          <Link href={`/spots/${id}/edit`} style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8A8A9A' }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 22 }}>edit</span>
-          </Link>
-        ) : (
-          <div style={{ width: 40 }} />
-        )}
+        {/* more_vert button — spot-details.html */}
+        <button style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c9f236', background: 'transparent', cursor: 'pointer', border: 'none' }}
+          onClick={() => isHost && isActive && router.push(`/spots/${id}/edit`)}>
+          <span className="material-symbols-outlined" style={{ fontSize: 22 }}>{isHost && isActive ? 'edit' : 'more_vert'}</span>
+        </button>
       </header>
 
       {/* Hero */}
@@ -348,8 +347,12 @@ export default function SpotDetailPage() {
             {leaving ? '처리 중...' : '참여 취소'}
           </button>
         ) : canJoin ? (
-          <button onClick={handleJoin} disabled={joining} style={{ flex: 1, height: 52, borderRadius: 12, background: '#c9f236', color: '#171e00', fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, fontSize: 20, textTransform: 'uppercase', letterSpacing: '0.1em', border: 'none', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.2s' }}>
-            {joining ? '참여 중...' : 'JOIN NOW'}
+          <button onClick={handleJoin} disabled={joining || joined} style={{ flex: 1, height: 52, borderRadius: 12, background: joined ? '#22C55E' : '#c9f236', color: joined ? '#fff' : '#171e00', fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, fontSize: 20, textTransform: 'uppercase', letterSpacing: '0.1em', border: 'none', cursor: joined ? 'default' : 'pointer', transition: 'background 0.3s, transform 0.15s' }}>
+            {joining ? (
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <span style={{ width: 16, height: 16, border: '2px solid #171e00', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
+              </span>
+            ) : joined ? '✓ CONFIRMED' : 'JOIN NOW'}
           </button>
         ) : (
           <button disabled style={{ flex: 1, height: 52, borderRadius: 12, background: '#1E1E22', color: '#3E3E4A', fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, fontSize: 16, textTransform: 'uppercase', border: '1px solid #2A2A32', cursor: 'not-allowed' }}>
