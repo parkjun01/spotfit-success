@@ -32,40 +32,33 @@ function dotSvgUrl(color: string, cur: number, max: number) {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
+const KAKAO_APP_KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || '405d8f53f98c26fe032e16aef77ee8d7';
+
 const PULSE_HTML = `
   <div style="position:relative;width:32px;height:32px;display:flex;align-items:center;justify-content:center;">
     <div style="position:absolute;width:32px;height:32px;border-radius:50%;background:rgba(201,242,54,0.35);animation:pulsering 2s ease-out infinite;pointer-events:none;"></div>
     <div style="width:16px;height:16px;background:#c9f236;border-radius:50%;border:2.5px solid #fff;box-shadow:0 0 8px rgba(201,242,54,0.6);position:relative;z-index:1;pointer-events:none;"></div>
   </div>`;
 
-// 카카오맵 SDK를 직접 로드하는 함수 (layout Script 의존 제거)
-function loadKakaoSDK(): Promise<void> {
+function waitForKakao(): Promise<void> {
   return new Promise((resolve, reject) => {
-    const kakao = (window as any).kakao;
-    if (kakao?.maps) { resolve(); return; }
+    // 이미 로드됨
+    if ((window as any).kakao?.maps) { resolve(); return; }
 
-    // 이미 스크립트가 로드 중인지 확인
-    const existing = document.querySelector('script[src*="dapi.kakao.com/v2/maps"]');
-    if (existing) {
-      // 이미 있으면 로드 완료 대기
-      const wait = setInterval(() => {
-        if ((window as any).kakao?.maps) { clearInterval(wait); resolve(); }
-      }, 100);
-      setTimeout(() => { clearInterval(wait); reject(new Error('SDK load timeout')); }, 10000);
-      return;
+    // 스크립트 주입
+    if (!document.querySelector(`script[src*="dapi.kakao.com/v2/maps"]`)) {
+      const s = document.createElement('script');
+      s.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_APP_KEY}`;
+      s.async = true;
+      document.head.appendChild(s);
     }
 
-    const appkey = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || '405d8f53f98c26fe032e16aef77ee8d7';
-    if (!appkey) { reject(new Error('NEXT_PUBLIC_KAKAO_JS_KEY is not set')); return; }
-
-    const script = document.createElement('script');
-    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${appkey}&autoload=false`;
-    script.async = true;
-    script.onload = () => {
-      (window as any).kakao.maps.load(() => resolve());
-    };
-    script.onerror = () => reject(new Error('Kakao Maps SDK failed to load'));
-    document.head.appendChild(script);
+    // 준비될 때까지 폴링
+    let tries = 0;
+    const t = setInterval(() => {
+      if ((window as any).kakao?.maps) { clearInterval(t); resolve(); return; }
+      if (++tries > 100) { clearInterval(t); reject(new Error('Kakao Maps 로드 시간 초과')); }
+    }, 100);
   });
 }
 
@@ -75,19 +68,15 @@ export default function SpotMap({ spots, center, onSpotClick }: Props) {
   const markersRef = useRef<any[]>([]);
   const locationOverlayRef = useRef<any>(null);
   const router = useRouter();
-  const [sdkError, setSdkError] = useState<string | null>(null);
-  const [sdkLoaded, setSdkLoaded] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState('');
 
-  // SDK 로드
   useEffect(() => {
-    loadKakaoSDK()
-      .then(() => setSdkLoaded(true))
-      .catch(e => setSdkError(e.message));
+    waitForKakao().then(() => setReady(true)).catch(e => setError(e.message));
   }, []);
 
-  // 지도 초기화 + 위치 펄스
   useEffect(() => {
-    if (!sdkLoaded || !mapRef.current) return;
+    if (!ready || !mapRef.current) return;
     const kakao = (window as any).kakao;
     const lat = center?.lat ?? 37.5665;
     const lng = center?.lng ?? 126.9780;
@@ -107,11 +96,10 @@ export default function SpotMap({ spots, center, onSpotClick }: Props) {
       overlay.setMap(mapInstanceRef.current);
       locationOverlayRef.current = overlay;
     }
-  }, [sdkLoaded, center?.lat, center?.lng]);
+  }, [ready, center?.lat, center?.lng]);
 
-  // 마커
   useEffect(() => {
-    if (!sdkLoaded || !mapInstanceRef.current) return;
+    if (!ready || !mapInstanceRef.current) return;
     const kakao = (window as any).kakao;
     markersRef.current.forEach(m => m.setMap(null));
     markersRef.current = [];
@@ -121,37 +109,21 @@ export default function SpotMap({ spots, center, onSpotClick }: Props) {
       const isFull = spot.status === 'full';
       const isClosing = !isFull && spot.current_participants / spot.max_participants >= 0.8;
       const color = isFull ? '#3E3E4A' : isClosing ? '#fd591e' : getSportColor(spot.sport_name);
-
-      const img = new kakao.maps.MarkerImage(
-        dotSvgUrl(color, spot.current_participants, spot.max_participants),
-        new kakao.maps.Size(44, 44), { offset: new kakao.maps.Point(22, 22) }
-      );
-      const marker = new kakao.maps.Marker({
-        position: new kakao.maps.LatLng(spot.latitude, spot.longitude),
-        image: img, map: mapInstanceRef.current, title: spot.title,
-      });
-      kakao.maps.event.addListener(marker, 'click', () => {
-        if (onSpotClick) onSpotClick(spot); else router.push(`/spots/${spot.id}`);
-      });
+      const img = new kakao.maps.MarkerImage(dotSvgUrl(color, spot.current_participants, spot.max_participants), new kakao.maps.Size(44, 44), { offset: new kakao.maps.Point(22, 22) });
+      const marker = new kakao.maps.Marker({ position: new kakao.maps.LatLng(spot.latitude, spot.longitude), image: img, map: mapInstanceRef.current, title: spot.title });
+      kakao.maps.event.addListener(marker, 'click', () => { if (onSpotClick) onSpotClick(spot); else router.push(`/spots/${spot.id}`); });
       markersRef.current.push(marker);
     });
-  }, [sdkLoaded, spots]);
+  }, [ready, spots]);
 
-  if (sdkError) return (
-    <div style={{ width: '100%', height: '100%', minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0E0E0F', gap: 12 }}>
+  if (error) return (
+    <div style={{ width: '100%', height: '100%', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0E0E0F', gap: 12 }}>
       <span className="material-symbols-outlined" style={{ fontSize: 48, color: '#3E3E4A' }}>map_off</span>
-      <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, color: '#8A8A9A', textAlign: 'center', padding: '0 32px' }}>
-        지도를 불러올 수 없습니다<br/>
-        <span style={{ fontSize: 12, color: '#3E3E4A' }}>{sdkError}</span>
-      </p>
+      <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, color: '#8A8A9A', textAlign: 'center' }}>지도를 불러올 수 없습니다<br/><span style={{ fontSize: 12, color: '#3E3E4A' }}>{error}</span></p>
     </div>
   );
 
-  if (!sdkLoaded) return (
-    <div style={{ width: '100%', height: '100%', minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0E0E0F' }}>
-      <div style={{ width: 32, height: 32, border: '3px solid #c9f236', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-    </div>
+  return (
+    <div ref={mapRef} style={{ width: '100%', height: '100%', minHeight: '100vh', background: '#0E0E0F' }} />
   );
-
-  return <div ref={mapRef} style={{ width: '100%', height: '100%', minHeight: '100dvh' }} />;
 }

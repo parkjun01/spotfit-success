@@ -1,23 +1,22 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 
-function loadKakaoSDK(): Promise<void> {
+const KAKAO_APP_KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || '405d8f53f98c26fe032e16aef77ee8d7';
+
+function waitForKakao(): Promise<void> {
   return new Promise((resolve, reject) => {
     if ((window as any).kakao?.maps) { resolve(); return; }
-    const existing = document.querySelector('script[src*="dapi.kakao.com/v2/maps"]');
-    if (existing) {
-      const wait = setInterval(() => { if ((window as any).kakao?.maps) { clearInterval(wait); resolve(); } }, 100);
-      setTimeout(() => { clearInterval(wait); reject(new Error('timeout')); }, 10000);
-      return;
+    if (!document.querySelector(`script[src*="dapi.kakao.com/v2/maps"]`)) {
+      const s = document.createElement('script');
+      s.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_APP_KEY}`;
+      s.async = true;
+      document.head.appendChild(s);
     }
-    const appkey = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || '405d8f53f98c26fe032e16aef77ee8d7';
-    if (!appkey) { reject(new Error('appkey missing')); return; }
-    const s = document.createElement('script');
-    s.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${appkey}&autoload=false`;
-    s.async = true;
-    s.onload = () => (window as any).kakao.maps.load(() => resolve());
-    s.onerror = () => reject(new Error('load failed'));
-    document.head.appendChild(s);
+    let tries = 0;
+    const t = setInterval(() => {
+      if ((window as any).kakao?.maps) { clearInterval(t); resolve(); return; }
+      if (++tries > 100) { clearInterval(t); reject(new Error('timeout')); }
+    }, 100);
   });
 }
 
@@ -43,7 +42,7 @@ export default function RouteMap({ start, end, routeCoords, distance, duration }
   const minutes = Math.round(duration / 60);
 
   useEffect(() => {
-    loadKakaoSDK().then(() => setReady(true)).catch(() => {});
+    waitForKakao().then(() => setReady(true)).catch(() => {});
   }, []);
 
   useEffect(() => {
