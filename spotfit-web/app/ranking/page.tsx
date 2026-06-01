@@ -7,12 +7,12 @@ interface RankEntry {
   activityScore: number; spotCount: number; subscription_status?: string;
 }
 
-const NAV = [
-  { href: '/', icon: 'home', label: 'Home' },
-  { href: '/?view=map', icon: 'map', label: 'Explore' },
-  { href: '/spots/new', icon: 'add_box', label: 'Host' },
-  { href: '/ranking', icon: 'leaderboard', label: 'Ranks', active: true },
-  { href: '/benefits', icon: 'local_offer', label: '혜택' },
+const NAV: { href: string; icon: string; label: string; key: string; active?: boolean }[] = [
+  { href: '/', icon: 'home', label: 'Home', key: 'home' },
+  { href: '/?view=map', icon: 'map', label: 'Explore', key: 'explore' },
+  { href: '/spots/new', icon: 'add_box', label: 'Host', key: 'host' },
+  { href: '/ranking', icon: 'leaderboard', label: 'Ranks', key: 'ranking', active: true },
+  { href: '/benefits', icon: 'local_offer', label: '혜택', key: 'benefits' },
 ];
 
 export default function RankingPage() {
