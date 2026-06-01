@@ -1,5 +1,25 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
+function loadKakaoSDK(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if ((window as any).kakao?.maps) { resolve(); return; }
+    const existing = document.querySelector('script[src*="dapi.kakao.com/v2/maps"]');
+    if (existing) {
+      const wait = setInterval(() => { if ((window as any).kakao?.maps) { clearInterval(wait); resolve(); } }, 100);
+      setTimeout(() => { clearInterval(wait); reject(new Error('timeout')); }, 10000);
+      return;
+    }
+    const appkey = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
+    if (!appkey) { reject(new Error('appkey missing')); return; }
+    const s = document.createElement('script');
+    s.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${appkey}&autoload=false`;
+    s.async = true;
+    s.onload = () => (window as any).kakao.maps.load(() => resolve());
+    s.onerror = () => reject(new Error('load failed'));
+    document.head.appendChild(s);
+  });
+}
 
 interface Props {
   start: { lat: number; lng: number };
@@ -18,51 +38,34 @@ function dotSvgUrl(color: string) {
 
 export default function RouteMap({ start, end, routeCoords, distance, duration }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
+  const [ready, setReady] = useState(false);
   const distKm = distance < 1000 ? `${Math.round(distance)}m` : `${(distance / 1000).toFixed(1)}km`;
   const minutes = Math.round(duration / 60);
 
   useEffect(() => {
-    const init = () => {
-      if (!mapRef.current) return;
-      const kakao = (window as any).kakao;
+    loadKakaoSDK().then(() => setReady(true)).catch(() => {});
+  }, []);
 
-      const map = new kakao.maps.Map(mapRef.current, {
-        center: new kakao.maps.LatLng(start.lat, start.lng),
-        level: 5,
-      });
+  useEffect(() => {
+    if (!ready || !mapRef.current) return;
+    const kakao = (window as any).kakao;
 
-      if (routeCoords.length > 0) {
-        const path = routeCoords.map(([lat, lng]) => new kakao.maps.LatLng(lat, lng));
-        new kakao.maps.Polyline({
-          map, path,
-          strokeWeight: 5,
-          strokeColor: '#c9f236',
-          strokeOpacity: 0.9,
-          strokeStyle: 'solid',
-        });
-        const bounds = new kakao.maps.LatLngBounds();
-        path.forEach(p => bounds.extend(p));
-        map.setBounds(bounds);
-      }
+    const map = new kakao.maps.Map(mapRef.current, {
+      center: new kakao.maps.LatLng(start.lat, start.lng),
+      level: 5,
+    });
 
-      new kakao.maps.Marker({
-        map,
-        position: new kakao.maps.LatLng(start.lat, start.lng),
-        image: new kakao.maps.MarkerImage(dotSvgUrl('#3B82F6'), new kakao.maps.Size(20, 20), { offset: new kakao.maps.Point(10, 10) }),
-      });
-      new kakao.maps.Marker({
-        map,
-        position: new kakao.maps.LatLng(end.lat, end.lng),
-        image: new kakao.maps.MarkerImage(dotSvgUrl('#c9f236'), new kakao.maps.Size(20, 20), { offset: new kakao.maps.Point(10, 10) }),
-      });
-    };
+    if (routeCoords.length > 0) {
+      const path = routeCoords.map(([lat, lng]) => new kakao.maps.LatLng(lat, lng));
+      new kakao.maps.Polyline({ map, path, strokeWeight: 5, strokeColor: '#c9f236', strokeOpacity: 0.9, strokeStyle: 'solid' });
+      const bounds = new kakao.maps.LatLngBounds();
+      path.forEach(p => bounds.extend(p));
+      map.setBounds(bounds);
+    }
 
-    if ((window as any).kakao?.maps) { init(); return; }
-    const t = setInterval(() => {
-      if ((window as any).kakao?.maps) { clearInterval(t); init(); }
-    }, 150);
-    return () => clearInterval(t);
-  }, [start, end, routeCoords]);
+    new kakao.maps.Marker({ map, position: new kakao.maps.LatLng(start.lat, start.lng), image: new kakao.maps.MarkerImage(dotSvgUrl('#3B82F6'), new kakao.maps.Size(20, 20), { offset: new kakao.maps.Point(10, 10) }) });
+    new kakao.maps.Marker({ map, position: new kakao.maps.LatLng(end.lat, end.lng), image: new kakao.maps.MarkerImage(dotSvgUrl('#c9f236'), new kakao.maps.Size(20, 20), { offset: new kakao.maps.Point(10, 10) }) });
+  }, [ready, start, end, routeCoords]);
 
   return (
     <div>
