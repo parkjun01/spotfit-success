@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface Spot {
@@ -22,108 +22,104 @@ const SPORT_COLORS: Record<string, string> = {
   '필라테스': '#EC4899', '헬스': '#475569', '골프': '#15803D', '볼링': '#7C3AED',
   '배구': '#D97706', '핸드볼': '#0D9488',
 };
-const getSportColor = (name: string) => SPORT_COLORS[name] || '#c9f236';
+const getSportColor = (n: string) => SPORT_COLORS[n] || '#c9f236';
 
-function dotSvgUrl(color: string, cur: number, max: number) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44">
-    <circle cx="22" cy="22" r="19" fill="${color}" stroke="#0A0A0B" stroke-width="3"/>
-    <text x="22" y="27" text-anchor="middle" fill="white" font-size="11" font-family="Arial,sans-serif" font-weight="bold">${cur}/${max}</text>
-  </svg>`;
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+function markerSvg(color: string, cur: number, max: number) {
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44"><circle cx="22" cy="22" r="19" fill="${color}" stroke="#0A0A0B" stroke-width="3"/><text x="22" y="27" text-anchor="middle" fill="white" font-size="11" font-family="Arial" font-weight="bold">${cur}/${max}</text></svg>`
+  );
 }
 
-const KAKAO_APP_KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || '405d8f53f98c26fe032e16aef77ee8d7';
+const PULSE = `<div style="position:relative;width:32px;height:32px;display:flex;align-items:center;justify-content:center;"><div style="position:absolute;width:32px;height:32px;border-radius:50%;background:rgba(201,242,54,0.35);animation:pulsering 2s ease-out infinite;"></div><div style="width:16px;height:16px;background:#c9f236;border-radius:50%;border:2.5px solid #fff;box-shadow:0 0 8px rgba(201,242,54,0.6);position:relative;z-index:1;"></div></div>`;
 
-const PULSE_HTML = `
-  <div style="position:relative;width:32px;height:32px;display:flex;align-items:center;justify-content:center;">
-    <div style="position:absolute;width:32px;height:32px;border-radius:50%;background:rgba(201,242,54,0.35);animation:pulsering 2s ease-out infinite;pointer-events:none;"></div>
-    <div style="width:16px;height:16px;background:#c9f236;border-radius:50%;border:2.5px solid #fff;box-shadow:0 0 8px rgba(201,242,54,0.6);position:relative;z-index:1;pointer-events:none;"></div>
-  </div>`;
-
-function waitForKakao(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    // 이미 로드됨
-    if ((window as any).kakao?.maps) { resolve(); return; }
-
-    // 스크립트 주입
-    if (!document.querySelector(`script[src*="dapi.kakao.com/v2/maps"]`)) {
-      const s = document.createElement('script');
-      s.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_APP_KEY}`;
-      s.async = true;
-      document.head.appendChild(s);
-    }
-
-    // 준비될 때까지 폴링
-    let tries = 0;
-    const t = setInterval(() => {
-      if ((window as any).kakao?.maps) { clearInterval(t); resolve(); return; }
-      if (++tries > 100) { clearInterval(t); reject(new Error('Kakao Maps 로드 시간 초과')); }
-    }, 100);
-  });
-}
+const KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || '405d8f53f98c26fe032e16aef77ee8d7';
 
 export default function SpotMap({ spots, center, onSpotClick }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
+  const mapRef2 = useRef<any>(null);        // kakao map instance
   const markersRef = useRef<any[]>([]);
-  const locationOverlayRef = useRef<any>(null);
+  const overlayRef = useRef<any>(null);
   const router = useRouter();
-  const [ready, setReady] = useState(false);
-  const [error, setError] = useState('');
 
   useEffect(() => {
-    waitForKakao().then(() => setReady(true)).catch(e => setError(e.message));
-  }, []);
+    if (!mapRef.current) return;
 
-  useEffect(() => {
-    if (!ready || !mapRef.current) return;
-    const kakao = (window as any).kakao;
+    // 1. SDK 스크립트 주입
+    if (!document.querySelector('script[src*="dapi.kakao.com/v2/maps"]')) {
+      const s = document.createElement('script');
+      s.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KEY}`;
+      document.head.appendChild(s);
+    }
+
     const lat = center?.lat ?? 37.5665;
     const lng = center?.lng ?? 126.9780;
+    let done = false;
 
-    if (!mapInstanceRef.current) {
-      mapInstanceRef.current = new kakao.maps.Map(mapRef.current, {
-        center: new kakao.maps.LatLng(lat, lng),
-        level: 7,
-      });
-    } else {
-      mapInstanceRef.current.setCenter(new kakao.maps.LatLng(lat, lng));
-    }
+    // 2. kakao.maps 준비될 때까지 폴링
+    const init = () => {
+      if (done || !mapRef.current) return;
+      done = true;
+      const kakao = (window as any).kakao;
 
-    if (locationOverlayRef.current) { locationOverlayRef.current.setMap(null); locationOverlayRef.current = null; }
-    if (center) {
-      const overlay = new kakao.maps.CustomOverlay({ position: new kakao.maps.LatLng(lat, lng), content: PULSE_HTML, zIndex: 15 });
-      overlay.setMap(mapInstanceRef.current);
-      locationOverlayRef.current = overlay;
-    }
-  }, [ready, center?.lat, center?.lng]);
+      // 지도 초기화 또는 센터 업데이트
+      if (!mapRef2.current) {
+        mapRef2.current = new kakao.maps.Map(mapRef.current, {
+          center: new kakao.maps.LatLng(lat, lng),
+          level: 7,
+        });
+      } else {
+        mapRef2.current.setCenter(new kakao.maps.LatLng(lat, lng));
+      }
 
+      // 현재 위치 펄스
+      if (overlayRef.current) overlayRef.current.setMap(null);
+      if (center) {
+        overlayRef.current = new kakao.maps.CustomOverlay({
+          position: new kakao.maps.LatLng(lat, lng),
+          content: PULSE,
+          zIndex: 15,
+        });
+        overlayRef.current.setMap(mapRef2.current);
+      }
+    };
+
+    if ((window as any).kakao?.maps) { init(); return; }
+    const t = setInterval(() => {
+      if ((window as any).kakao?.maps) { clearInterval(t); init(); }
+    }, 150);
+    return () => clearInterval(t);
+  }, [center?.lat, center?.lng]);
+
+  // 마커 업데이트
   useEffect(() => {
-    if (!ready || !mapInstanceRef.current) return;
+    if (!mapRef2.current) return;
     const kakao = (window as any).kakao;
+    if (!kakao?.maps) return;
+
     markersRef.current.forEach(m => m.setMap(null));
     markersRef.current = [];
 
     spots.forEach(spot => {
       if (!spot.latitude || !spot.longitude) return;
       const isFull = spot.status === 'full';
-      const isClosing = !isFull && spot.current_participants / spot.max_participants >= 0.8;
-      const color = isFull ? '#3E3E4A' : isClosing ? '#fd591e' : getSportColor(spot.sport_name);
-      const img = new kakao.maps.MarkerImage(dotSvgUrl(color, spot.current_participants, spot.max_participants), new kakao.maps.Size(44, 44), { offset: new kakao.maps.Point(22, 22) });
-      const marker = new kakao.maps.Marker({ position: new kakao.maps.LatLng(spot.latitude, spot.longitude), image: img, map: mapInstanceRef.current, title: spot.title });
-      kakao.maps.event.addListener(marker, 'click', () => { if (onSpotClick) onSpotClick(spot); else router.push(`/spots/${spot.id}`); });
+      const closing = !isFull && spot.current_participants / spot.max_participants >= 0.8;
+      const color = isFull ? '#3E3E4A' : closing ? '#fd591e' : getSportColor(spot.sport_name);
+      const img = new kakao.maps.MarkerImage(
+        markerSvg(color, spot.current_participants, spot.max_participants),
+        new kakao.maps.Size(44, 44), { offset: new kakao.maps.Point(22, 22) }
+      );
+      const marker = new kakao.maps.Marker({
+        position: new kakao.maps.LatLng(spot.latitude, spot.longitude),
+        image: img, map: mapRef2.current, title: spot.title,
+      });
+      kakao.maps.event.addListener(marker, 'click', () => {
+        if (onSpotClick) onSpotClick(spot); else router.push(`/spots/${spot.id}`);
+      });
       markersRef.current.push(marker);
     });
-  }, [ready, spots]);
-
-  if (error) return (
-    <div style={{ width: '100%', height: '100%', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0E0E0F', gap: 12 }}>
-      <span className="material-symbols-outlined" style={{ fontSize: 48, color: '#3E3E4A' }}>map_off</span>
-      <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, color: '#8A8A9A', textAlign: 'center' }}>지도를 불러올 수 없습니다<br/><span style={{ fontSize: 12, color: '#3E3E4A' }}>{error}</span></p>
-    </div>
-  );
+  }, [spots, mapRef2.current]);
 
   return (
-    <div ref={mapRef} style={{ width: '100%', height: '100%', minHeight: '100vh', background: '#0E0E0F' }} />
+    <div ref={mapRef} style={{ width: '100%', height: '100%', minHeight: '100vh' }} />
   );
 }
