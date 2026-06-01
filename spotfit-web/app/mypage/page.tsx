@@ -17,11 +17,8 @@ export default function MyPage() {
       fetch('/api/users/me', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
       fetch('/api/users/me/stats', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => ({ data: null })),
       fetch('/api/evaluations?pending=true', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => ({ data: [] })),
-    ]).then(([userData, statsData, evalData]) => {
-      setUser(userData.data);
-      setStats(statsData.data);
-      setPendingEvals((evalData.data || []).length);
-    }).finally(() => setLoading(false));
+    ]).then(([u, s, e]) => { setUser(u.data); setStats(s.data); setPendingEvals((e.data || []).length); })
+      .finally(() => setLoading(false));
   }, []);
 
   const handleLogout = () => {
@@ -30,155 +27,151 @@ export default function MyPage() {
   };
 
   const mannerScore = user?.manner_score ?? 36.5;
-  const mannerColor = mannerScore >= 38 ? '#10B981' : mannerScore >= 30 ? '#F59E0B' : '#EF4444';
-  const mannerLabel = mannerScore >= 38 ? 'Excellent' : mannerScore >= 30 ? 'Good' : 'Warning';
+  const mannerColor = mannerScore >= 38 ? '#22C55E' : mannerScore >= 30 ? '#F59E0B' : '#EF4444';
+  const mannerLabel = mannerScore >= 38 ? 'EXCELLENT' : mannerScore >= 30 ? 'GOOD' : 'WARNING';
+  const mannerPct = Math.min(100, (mannerScore / 50) * 100);
 
   const subScores = [
-    { label: '시간 약속', value: stats?.time_score ?? mannerScore * 0.28, max: 10, icon: '⏰' },
-    { label: '태도/매너', value: stats?.manner_detail ?? mannerScore * 0.28, max: 10, icon: '😊' },
-    { label: '운동 실력', value: stats?.skill_score ?? mannerScore * 0.28, max: 10, icon: '💪' },
+    { label: '시간 약속', value: stats?.time_score ?? mannerScore * 0.28, icon: 'schedule' },
+    { label: '태도/매너', value: stats?.manner_detail ?? mannerScore * 0.28, icon: 'sentiment_satisfied' },
+    { label: '운동 실력', value: stats?.skill_score ?? mannerScore * 0.28, icon: 'fitness_center' },
   ];
 
-  if (loading) return <div className="flex items-center justify-center h-screen"><div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#131314' }}>
+      <div style={{ width: 32, height: 32, border: '3px solid #c9f236', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
-      <header className="bg-white border-b px-4 py-4 sticky top-0 z-10">
-        <h1 className="text-2xl font-black text-gray-900">마이페이지</h1>
+    <div style={{ minHeight: '100vh', background: '#131314', paddingBottom: 96 }}>
+
+      {/* Header */}
+      <header style={{ position: 'sticky', top: 0, zIndex: 40, height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', background: 'rgba(19,19,20,0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid #2A2A32' }}>
+        <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, color: '#c9f236', letterSpacing: '0.05em' }}>MY PAGE</span>
+        <Link href="/mypage/edit" style={{ width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8A8A9A', background: '#1E1E22' }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>edit</span>
+        </Link>
       </header>
 
-      <div className="p-4 space-y-3">
+      <div style={{ padding: '16px 16px 0' }}>
 
-        {/* 프로필 카드 */}
+        {/* Profile Card */}
         {user && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="h-1 bg-primary" />
-            <div className="p-4">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-white text-2xl font-black">
-                  {user.nickname?.[0]}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-lg font-black text-gray-900">{user.nickname}</p>
-                    {user.subscription_status === 'premium' && (
-                      <span className="badge bg-amber-100 text-amber-700 font-extrabold">👑 PREMIUM</span>
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-400">{user.activity_region || '지역 미설정'}</p>
-                </div>
-                <div className="text-center">
-                  <div
-                    className="w-14 h-14 rounded-full border-3 flex flex-col items-center justify-center"
-                    style={{ border: `3px solid ${mannerColor}` }}
-                  >
-                    <span className="text-base font-black" style={{ color: mannerColor }}>{mannerScore.toFixed(1)}</span>
-                  </div>
-                  <p className="text-xs font-bold mt-1" style={{ color: mannerColor }}>{mannerLabel}</p>
-                </div>
+          <div style={{ background: 'linear-gradient(135deg,#1a2200,#141416)', border: '1px solid rgba(201,242,54,0.2)', borderRadius: 20, padding: 20, marginBottom: 12, position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: -30, right: -30, width: 140, height: 140, background: 'radial-gradient(circle,rgba(201,242,54,0.1) 0%,transparent 70%)', pointerEvents: 'none' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+              <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#c9f236', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, color: '#171e00', flexShrink: 0 }}>
+                {user.nickname?.[0]}
               </div>
-
-              {/* 활동 통계 3칸 */}
-              <div className="grid grid-cols-3 gap-2 mb-4">
-                {[
-                  { label: '참여 스팟', value: stats?.spot_count ?? user.spot_count ?? 0, unit: '회' },
-                  { label: '월간 거리', value: stats?.monthly_km ?? '-', unit: 'km' },
-                  { label: '매너점수', value: mannerScore.toFixed(1), unit: 'pt' },
-                ].map(s => (
-                  <div key={s.label} className="bg-gray-50 rounded-xl p-3 text-center">
-                    <p className="text-xl font-black text-gray-900">{s.value}<span className="text-xs font-bold text-gray-400 ml-0.5">{s.unit}</span></p>
-                    <p className="text-xs text-gray-400 mt-0.5">{s.label}</p>
-                  </div>
-                ))}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                  <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 20, fontWeight: 700, color: '#ffffef', textTransform: 'uppercase' }}>{user.nickname}</p>
+                  {user.subscription_status === 'premium' && (
+                    <span style={{ background: '#c9f236', color: '#171e00', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>👑 PRO</span>
+                  )}
+                </div>
+                <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: '#8A8A9A' }}>{user.activity_region || '지역 미설정'}</p>
               </div>
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <p style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, color: mannerColor, lineHeight: 1 }}>{mannerScore.toFixed(1)}</p>
+                <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: mannerColor }}>{mannerLabel}</p>
+              </div>
+            </div>
 
-              {/* 서브 점수 */}
-              <div className="space-y-2">
-                <p className="text-xs font-extrabold text-gray-400 uppercase tracking-wide">세부 평가 점수</p>
-                {subScores.map(s => {
-                  const pct = Math.min(100, (s.value / s.max) * 100);
-                  const color = pct >= 80 ? '#10B981' : pct >= 60 ? '#F97316' : '#EF4444';
-                  return (
-                    <div key={s.label} className="flex items-center gap-3">
-                      <span className="text-base w-6">{s.icon}</span>
-                      <div className="flex-1">
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="font-semibold text-gray-600">{s.label}</span>
-                          <span className="font-bold" style={{ color }}>{s.value.toFixed(1)}</span>
-                        </div>
-                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
-                        </div>
+            {/* Stats */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 14 }}>
+              {[
+                { label: '참여 스팟', value: stats?.spot_count ?? user.spot_count ?? 0, unit: '회' },
+                { label: '월간 거리', value: stats?.monthly_km ?? '—', unit: 'km' },
+                { label: '매너점수', value: mannerScore.toFixed(1), unit: 'pt' },
+              ].map(s => (
+                <div key={s.label} style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 10, padding: '10px 0', textAlign: 'center', border: '1px solid #2A2A32' }}>
+                  <p style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 24, color: '#c9f236', lineHeight: 1 }}>{s.value}<span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, color: '#8A8A9A' }}>{s.unit}</span></p>
+                  <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', color: '#8A8A9A', marginTop: 2 }}>{s.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Sub scores */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8A8A9A' }}>세부 평가</p>
+              {subScores.map(s => {
+                const pct = Math.min(100, (s.value / 10) * 100);
+                const c = pct >= 80 ? '#22C55E' : pct >= 60 ? '#c9f236' : '#EF4444';
+                return (
+                  <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#8A8A9A' }}>{s.icon}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 600, color: '#c5c9ae' }}>{s.label}</span>
+                        <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, color: c }}>{s.value.toFixed(1)}</span>
+                      </div>
+                      <div style={{ height: 4, background: '#2A2A32', borderRadius: 999, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${pct}%`, background: c, borderRadius: 999 }} />
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
-        {/* 선호 종목 */}
+        {/* Preferred Sports */}
         {user?.user_sports?.length > 0 && (
-          <div className="card">
-            <p className="text-xs font-extrabold text-gray-400 uppercase tracking-wide mb-2">선호 종목</p>
-            <div className="flex flex-wrap gap-2">
+          <div style={{ background: '#141416', border: '1px solid #2A2A32', borderRadius: 16, padding: '14px 16px', marginBottom: 12 }}>
+            <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8A8A9A', marginBottom: 10 }}>선호 종목</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {user.user_sports.map((us: any) => (
-                <span key={us.sports?.id} className="badge bg-orange-100 text-orange-700">{us.sports?.name}</span>
+                <span key={us.sports?.id} style={{ padding: '4px 12px', borderRadius: 999, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', background: 'rgba(201,242,54,0.1)', border: '1px solid rgba(201,242,54,0.3)', color: '#c9f236' }}>{us.sports?.name}</span>
               ))}
             </div>
           </div>
         )}
 
-        {/* 메뉴 */}
-        <div className="card divide-y divide-gray-50">
+        {/* Menu */}
+        <div style={{ background: '#141416', border: '1px solid #2A2A32', borderRadius: 16, overflow: 'hidden' }}>
           {[
-            { label: '프로필 수정', href: '/mypage/edit', icon: '✏️' },
-            { label: '내 스팟 이력', href: '/mypage/spots', icon: '📋', badge: pendingEvals > 0, badgeText: `평가 ${pendingEvals}건` },
-            { label: '👑 프리미엄 구독', href: '/mypage/premium', icon: '', badge: user?.subscription_status !== 'premium', badgeText: 'UPGRADE' },
-            { label: '알림 설정', href: '/mypage/notifications', icon: '🔔' },
-          ].map(item => (
-            <Link key={item.href} href={item.href} className="flex items-center justify-between py-3.5 hover:bg-gray-50 transition-colors">
-              <span className="text-sm font-semibold text-gray-700">{item.icon && `${item.icon} `}{item.label}</span>
-              <div className="flex items-center gap-2">
-                {item.badge && (
-                  <span className="badge bg-primary text-white text-xs">{(item as any).badgeText || 'NEW'}</span>
-                )}
-                <span className="text-gray-300 text-lg">›</span>
-              </div>
+            { label: '프로필 수정', href: '/mypage/edit', icon: 'edit' },
+            { label: '내 스팟 이력', href: '/mypage/spots', icon: 'history', badge: pendingEvals > 0 ? `평가 ${pendingEvals}건` : null },
+            { label: '프리미엄 구독', href: '/mypage/premium', icon: 'workspace_premium', badge: user?.subscription_status !== 'premium' ? 'UPGRADE' : null, lime: true },
+            { label: '알림 설정', href: '/mypage/notifications', icon: 'notifications' },
+          ].map((item, i) => (
+            <Link key={item.href} href={item.href} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderBottom: '1px solid #1E1E22', textDecoration: 'none', transition: 'background 0.2s' }}
+              onMouseEnter={e => (e.currentTarget.style.background = '#1E1E22')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+              <span className="material-symbols-outlined" style={{ fontSize: 20, color: item.lime ? '#c9f236' : '#8A8A9A' }}>{item.icon}</span>
+              <span style={{ flex: 1, fontFamily: 'DM Sans, sans-serif', fontSize: 14, fontWeight: 500, color: item.lime ? '#c9f236' : '#e5e2e3' }}>{item.label}</span>
+              {item.badge && <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', background: '#c9f236', color: '#171e00', padding: '2px 8px', borderRadius: 4 }}>{item.badge}</span>}
+              <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#3E3E4A' }}>chevron_right</span>
             </Link>
           ))}
-          <button onClick={handleLogout} className="w-full flex items-center justify-between py-3.5 hover:bg-gray-50 transition-colors">
-            <span className="text-sm font-semibold text-red-500">🚪 로그아웃</span>
-            <span className="text-gray-300 text-lg">›</span>
+          <button onClick={handleLogout} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', background: 'none', border: 'none', cursor: 'pointer', transition: 'background 0.2s', textAlign: 'left' }}
+            onMouseEnter={e => (e.currentTarget.style.background = '#1E1E22')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+            <span className="material-symbols-outlined" style={{ fontSize: 20, color: '#EF4444' }}>logout</span>
+            <span style={{ flex: 1, fontFamily: 'DM Sans, sans-serif', fontSize: 14, fontWeight: 500, color: '#EF4444' }}>로그아웃</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#3E3E4A' }}>chevron_right</span>
           </button>
         </div>
       </div>
 
-      <BottomNav active="mypage" />
+      {/* Bottom Nav */}
+      <nav style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 448, height: 68, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'space-around', padding: '0 8px', background: 'rgba(20,20,22,0.92)', backdropFilter: 'blur(16px)', borderTop: '1px solid #2A2A32', borderRadius: '16px 16px 0 0' }}>
+        {[
+          { href: '/', icon: 'home', label: 'Home' },
+          { href: '/?view=map', icon: 'map', label: 'Explore' },
+          { href: '/spots/new', icon: 'add_box', label: 'Host' },
+          { href: '/ranking', icon: 'leaderboard', label: 'Ranks' },
+          { href: '/mypage', icon: 'person', label: 'My', active: true },
+        ].map(tab => (
+          <Link key={tab.href} href={tab.href} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, color: (tab as any).active ? '#c9f236' : '#8A8A9A', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '4px 8px', minWidth: 56, filter: (tab as any).active ? 'drop-shadow(0 0 6px rgba(201,242,54,0.35))' : 'none' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 24, fontVariationSettings: (tab as any).active ? "'FILL' 1" : "'FILL' 0" }}>{tab.icon}</span>
+            {tab.label}
+          </Link>
+        ))}
+      </nav>
     </div>
   );
 }
-
-function BottomNav({ active }: { active: string }) {
-  const tabs = [
-    { href: '/', key: 'home', label: '스팟', icon: <MapIcon /> },
-    { href: '/benefits', key: 'benefits', label: '혜택', icon: <GiftIcon /> },
-    { href: '/ranking', key: 'ranking', label: '랭킹', icon: <TrophyIcon /> },
-    { href: '/mypage', key: 'mypage', label: '마이', icon: <UserIcon /> },
-  ];
-  return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 flex z-20">
-      {tabs.map(t => (
-        <Link key={t.key} href={t.href} className={`flex-1 flex flex-col items-center py-2.5 transition-colors ${active === t.key ? 'text-primary' : 'text-gray-300'}`}>
-          <div className="w-6 h-6">{t.icon}</div>
-          <span className="text-xs mt-0.5 font-semibold">{t.label}</span>
-        </Link>
-      ))}
-    </nav>
-  );
-}
-function MapIcon() { return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>; }
-function GiftIcon() { return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" /></svg>; }
-function TrophyIcon() { return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>; }
-function UserIcon() { return <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>; }

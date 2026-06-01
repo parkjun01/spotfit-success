@@ -89,54 +89,41 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-8">
-      <header className="bg-white border-b px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
-        <button onClick={() => router.back()} className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
+    <div style={{ minHeight: '100vh', background: '#131314', paddingBottom: 32 }}>
+      <header style={{ position: 'sticky', top: 0, zIndex: 40, height: 64, display: 'flex', alignItems: 'center', gap: 12, padding: '0 16px', background: 'rgba(19,19,20,0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid #2A2A32' }}>
+        <button onClick={() => router.back()} style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c9f236', background: 'transparent', border: 'none', cursor: 'pointer' }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 24 }}>arrow_back</span>
         </button>
-        <h1 className="text-lg font-extrabold text-gray-900 flex-1">알림 설정</h1>
-        {saved && <span className="text-xs text-emerald-500 font-semibold animate-pulse">저장됨 ✓</span>}
+        <h1 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 22, color: '#c9f236', flex: 1, letterSpacing: '0.05em' }}>알림 설정</h1>
+        {saved && <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, color: '#22C55E', textTransform: 'uppercase', letterSpacing: '0.06em' }}>저장됨 ✓</span>}
       </header>
 
-      <div className="p-4 space-y-3">
-
-        {/* 전체 토글 */}
-        <div className="bg-white rounded-2xl border border-gray-100 px-4 py-3.5 flex items-center justify-between">
+      <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ background: '#141416', border: '1px solid #2A2A32', borderRadius: 16, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <p className="font-extrabold text-gray-900 text-sm">전체 알림</p>
-            <p className="text-xs text-gray-400 mt-0.5">모든 알림을 한번에 켜거나 끕니다</p>
+            <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 15, fontWeight: 700, color: '#e5e2e3' }}>전체 알림</p>
+            <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#8A8A9A', marginTop: 2 }}>모든 알림을 한번에 켜거나 끕니다</p>
           </div>
           <Toggle on={allOn} onToggle={toggleAll} />
         </div>
 
-        {/* 그룹별 설정 */}
         {SETTING_GROUPS.map(group => (
-          <div key={group.title} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-gray-50">
-              <p className="text-xs font-extrabold text-gray-400 uppercase tracking-wide">{group.title}</p>
+          <div key={group.title} style={{ background: '#141416', border: '1px solid #2A2A32', borderRadius: 16, overflow: 'hidden' }}>
+            <div style={{ padding: '10px 16px', borderBottom: '1px solid #1E1E22' }}>
+              <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8A8A9A' }}>{group.title}</p>
             </div>
-            <div className="divide-y divide-gray-50">
-              {group.items.map(item => (
-                <div key={item.key} className="px-4 py-3.5 flex items-center justify-between">
-                  <div className="flex-1 min-w-0 pr-4">
-                    <p className="text-sm font-semibold text-gray-800">{item.label}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{item.desc}</p>
-                  </div>
-                  <Toggle
-                    on={settings[item.key as keyof NotifSettings]}
-                    onToggle={() => toggle(item.key as keyof NotifSettings)}
-                  />
+            {group.items.map((item, i) => (
+              <div key={item.key} style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: i < group.items.length - 1 ? '1px solid #1E1E22' : 'none' }}>
+                <div style={{ flex: 1, minWidth: 0, paddingRight: 16 }}>
+                  <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 14, fontWeight: 500, color: '#e5e2e3' }}>{item.label}</p>
+                  <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#8A8A9A', marginTop: 2 }}>{item.desc}</p>
                 </div>
-              ))}
-            </div>
+                <Toggle on={settings[item.key as keyof NotifSettings]} onToggle={() => toggle(item.key as keyof NotifSettings)} />
+              </div>
+            ))}
           </div>
         ))}
-
-        <p className="text-xs text-center text-gray-300 pt-2">
-          알림은 기기 설정에서도 별도로 허용해야 수신됩니다
-        </p>
+        <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 11, textAlign: 'center', color: '#3E3E4A', paddingTop: 8 }}>알림은 기기 설정에서도 별도로 허용해야 수신됩니다</p>
       </div>
     </div>
   );
@@ -144,12 +131,8 @@ export default function NotificationsPage() {
 
 function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${on ? 'bg-primary' : 'bg-gray-200'}`}
-    >
-      <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${on ? 'translate-x-6' : 'translate-x-0.5'}`} />
+    <button type="button" onClick={onToggle} style={{ position: 'relative', width: 48, height: 24, borderRadius: 999, border: 'none', cursor: 'pointer', background: on ? '#c9f236' : '#2a2a2b', transition: 'background 0.2s', flexShrink: 0 }}>
+      <span style={{ position: 'absolute', top: 2, left: on ? 'calc(100% - 22px)' : 2, width: 20, height: 20, borderRadius: '50%', background: on ? '#171e00' : '#8A8A9A', transition: 'left 0.2s', display: 'block' }} />
     </button>
   );
 }

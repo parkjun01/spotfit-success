@@ -139,15 +139,15 @@ export default function RankingPage() {
         ))}
       </div>
 
-      {/* Sport Filter — with icons (ranking.html) */}
+      {/* Sport Filter — uses real DB sport IDs */}
       <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '12px 16px' }} className="no-scrollbar">
         {[
           { id: '', name: 'ALL', icon: 'bolt' },
-          { id: 'basketball', name: 'Hoops', icon: 'sports_basketball' },
-          { id: 'soccer', name: 'Soccer', icon: 'sports_soccer' },
-          { id: 'gym', name: 'Gym', icon: 'fitness_center' },
-          { id: 'tennis', name: 'Tennis', icon: 'sports_tennis' },
-          ...sports.slice(0, 3).map(s => ({ id: s.id, name: s.name, icon: 'sports' })),
+          ...sports.map(s => ({
+            id: s.id,
+            name: s.name,
+            icon: ({ '농구':'sports_basketball','축구':'sports_soccer','풋살':'sports_soccer','헬스':'fitness_center','테니스':'sports_tennis','수영':'pool','러닝':'directions_run','배드민턴':'sports_badminton','야구':'sports_baseball','배구':'sports_volleyball' } as Record<string,string>)[s.name] || 'sports',
+          })),
         ].map(s => {
           const active = sportId === s.id;
           return (

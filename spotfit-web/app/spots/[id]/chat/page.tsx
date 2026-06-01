@@ -214,137 +214,98 @@ export default function SpotChatPage() {
 
   if (pageError) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen gap-4 p-8">
-        <p className="text-4xl">⚠️</p>
-        <p className="text-gray-700 font-bold text-center">채팅을 불러올 수 없어요</p>
-        <p className="text-sm text-gray-400 text-center">{pageError}</p>
-        <button onClick={() => router.back()} className="btn-primary px-6 py-2.5 text-sm">돌아가기</button>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: 16, padding: 32, background: '#131314' }}>
+        <p style={{ fontSize: 40 }}>⚠️</p>
+        <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 18, fontWeight: 700, color: '#e5e2e3', textAlign: 'center' }}>채팅을 불러올 수 없어요</p>
+        <p style={{ fontSize: 13, color: '#8A8A9A', textAlign: 'center' }}>{pageError}</p>
+        <button onClick={() => router.back()} style={{ padding: '10px 24px', background: '#c9f236', color: '#171e00', borderRadius: 10, fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, fontSize: 15, textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>돌아가기</button>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: '#0A0A0B' }}>
 
-      {/* 헤더 */}
-      <header className="bg-white border-b px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
-        <button onClick={() => router.back()} className="text-gray-500 text-lg">←</button>
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-gray-900 truncate">{spotTitle || '채팅방'}</p>
-          <div className="flex items-center gap-1.5">
-            <span className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-400' : 'bg-gray-300'}`} />
-            <span className="text-xs text-gray-400">
-              {connected ? `실시간 연결됨 · ${participants.length}명` : '연결 중...'}
-            </span>
+      {/* Header */}
+      <header style={{ background: 'rgba(10,10,11,0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid #2A2A32', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+        <button onClick={() => router.back()} style={{ width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c9f236', background: 'transparent', border: 'none', cursor: 'pointer' }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 22 }}>arrow_back</span>
+        </button>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 16, fontWeight: 700, color: '#ffffef', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{spotTitle || '채팅방'}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: connected ? '#22C55E' : '#3E3E4A' }} />
+            <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#8A8A9A' }}>{connected ? `실시간 · ${participants.length}명` : '연결 중...'}</span>
           </div>
         </div>
-        <div className="flex -space-x-2">
+        <div style={{ display: 'flex' }}>
           {participants.slice(0, 4).map(p => (
-            <div
-              key={p.user_id}
-              title={p.users?.nickname}
-              className="w-7 h-7 rounded-full bg-primary border-2 border-white flex items-center justify-center text-white text-xs font-bold"
-            >
+            <div key={p.user_id} title={p.users?.nickname} style={{ width: 28, height: 28, borderRadius: '50%', background: avatarColor(p.user_id), border: '2px solid #0A0A0B', marginLeft: -6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 700, color: '#fff' }}>
               {p.users?.nickname?.[0] || '?'}
             </div>
           ))}
           {participants.length > 4 && (
-            <div className="w-7 h-7 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center text-gray-500 text-xs font-bold">
-              +{participants.length - 4}
-            </div>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#2a2a2b', border: '2px solid #0A0A0B', marginLeft: -6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, color: '#8A8A9A' }}>+{participants.length - 4}</div>
           )}
         </div>
       </header>
 
-      {/* 상태 공유 바 */}
+      {/* Status Bar */}
       {isParticipant && (
-        <div className="bg-white border-b px-3 py-2 flex items-center gap-2 overflow-x-auto">
-          <span className="text-xs text-gray-400 flex-shrink-0 font-medium">내 상태:</span>
+        <div style={{ background: '#141416', borderBottom: '1px solid #2A2A32', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8, overflowX: 'auto', flexShrink: 0 }} className="no-scrollbar">
+          <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: '#8A8A9A', flexShrink: 0 }}>내 상태</span>
           {STATUS_OPTIONS.map(s => (
-            <button
-              key={s.value}
-              onClick={() => handleStatusChange(s.value)}
-              className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-colors border ${
-                myStatus === s.value
-                  ? 'bg-primary text-white border-primary'
-                  : 'bg-white text-gray-600 border-gray-200'
-              }`}
-            >
+            <button key={s.value} onClick={() => handleStatusChange(s.value)} style={{ flexShrink: 0, padding: '4px 12px', borderRadius: 999, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', border: `1px solid ${myStatus === s.value ? '#c9f236' : '#2A2A32'}`, background: myStatus === s.value ? 'rgba(201,242,54,0.1)' : '#1E1E22', color: myStatus === s.value ? '#c9f236' : '#8A8A9A', cursor: 'pointer', transition: 'all 0.2s' }}>
               {s.label}
             </button>
           ))}
         </div>
       )}
 
-      {/* 메시지 목록 */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+      {/* Messages */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
         {loading && (
-          <div className="flex justify-center pt-8">
-            <div className="animate-spin w-6 h-6 border-4 border-primary border-t-transparent rounded-full" />
+          <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 32 }}>
+            <div style={{ width: 24, height: 24, border: '3px solid #c9f236', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
           </div>
         )}
         {!loading && messages.length === 0 && (
-          <div className="text-center pt-16 space-y-2">
-            <p className="text-3xl">💬</p>
-            <p className="text-sm text-gray-400">아직 메시지가 없습니다.<br />첫 번째로 인사해보세요!</p>
+          <div style={{ textAlign: 'center', paddingTop: 64 }}>
+            <p style={{ fontSize: 32 }}>💬</p>
+            <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 14, color: '#8A8A9A', marginTop: 8 }}>아직 메시지가 없습니다.<br/>첫 번째로 인사해보세요!</p>
           </div>
         )}
         {messages.map((msg, idx) => {
           if (msg.message_type === 'status' || msg.message_type === 'notice') {
             return (
-              <div key={msg.id} className="flex justify-center my-2">
-                <span className="bg-black/10 text-gray-600 text-xs px-3 py-1 rounded-full">
-                  {msg.message}
-                </span>
+              <div key={msg.id} style={{ display: 'flex', justifyContent: 'center', margin: '8px 0' }}>
+                <span style={{ background: 'rgba(255,255,255,0.06)', color: '#8A8A9A', fontSize: 12, padding: '4px 14px', borderRadius: 999 }}>{msg.message}</span>
               </div>
             );
           }
-
           const mine = isMe(msg);
           const prev = messages[idx - 1];
-          // 같은 사람이 연속으로 보낸 메시지면 아바타/이름 숨김
-          const showHeader = !mine && (
-            !prev || prev.message_type === 'status' || prev.message_type === 'notice' || prev.user_id !== msg.user_id
-          );
+          const showHeader = !mine && (!prev || prev.message_type === 'status' || prev.message_type === 'notice' || prev.user_id !== msg.user_id);
           const color = avatarColor(msg.user_id);
-
           return (
-            <div key={msg.id} className={`flex gap-2 ${mine ? 'flex-row-reverse' : 'flex-row'} ${showHeader ? 'mt-3' : 'mt-0.5'}`}>
-              {/* 아바타 — 상대방만, 첫 메시지만 표시 */}
+            <div key={msg.id} style={{ display: 'flex', gap: 8, flexDirection: mine ? 'row-reverse' : 'row', marginTop: showHeader ? 12 : 2 }}>
               {!mine && (
-                <div className="w-9 flex-shrink-0 flex flex-col justify-end">
+                <div style={{ width: 36, flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
                   {showHeader && (
-                    <div
-                      className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-extrabold shadow-sm"
-                      style={{ background: color }}
-                    >
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#fff' }}>
                       {msg.users?.nickname?.[0] || '?'}
                     </div>
                   )}
                 </div>
               )}
-
-              <div className={`max-w-[68%] flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
-                {/* 이름 — 상대방 첫 메시지만 */}
-                {showHeader && (
-                  <span className="text-xs font-bold mb-1 px-1" style={{ color }}>
-                    {msg.users?.nickname || '알 수 없음'}
-                  </span>
-                )}
-                <div className="flex items-end gap-1.5">
-                  {mine && (
-                    <span className="text-xs text-gray-300 mb-0.5 flex-shrink-0">{safeFormat(msg.created_at)}</span>
-                  )}
-                  <div className={`px-3.5 py-2.5 text-sm leading-relaxed break-words ${
-                    mine
-                      ? 'bg-primary text-white rounded-2xl rounded-tr-sm'
-                      : 'bg-white text-gray-900 shadow-sm rounded-2xl rounded-tl-sm'
-                  }`}>
+              <div style={{ maxWidth: '68%', display: 'flex', flexDirection: 'column', alignItems: mine ? 'flex-end' : 'flex-start' }}>
+                {showHeader && <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, color, marginBottom: 4, paddingLeft: 4 }}>{msg.users?.nickname || '알 수 없음'}</span>}
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+                  {mine && <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 11, color: '#3E3E4A', flexShrink: 0 }}>{safeFormat(msg.created_at)}</span>}
+                  <div style={{ padding: '10px 14px', fontSize: 14, lineHeight: 1.5, wordBreak: 'break-word', borderRadius: mine ? '18px 18px 4px 18px' : '18px 18px 18px 4px', background: mine ? '#c9f236' : '#1E1E22', color: mine ? '#171e00' : '#e5e2e3', border: mine ? 'none' : '1px solid #2A2A32', fontFamily: 'DM Sans, sans-serif' }}>
                     {msg.message}
                   </div>
-                  {!mine && (
-                    <span className="text-xs text-gray-300 mb-0.5 flex-shrink-0">{safeFormat(msg.created_at)}</span>
-                  )}
+                  {!mine && <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 11, color: '#3E3E4A', flexShrink: 0 }}>{safeFormat(msg.created_at)}</span>}
                 </div>
               </div>
             </div>
@@ -353,56 +314,47 @@ export default function SpotChatPage() {
         <div ref={bottomRef} />
       </div>
 
-      {/* 참여자 목록 */}
+      {/* Participants */}
       {participants.length > 0 && (
-        <details className="bg-white border-t px-4 py-2 group">
-          <summary className="flex items-center justify-between list-none cursor-pointer text-xs text-gray-400 select-none">
-            <span>참여자 {participants.length}명 보기</span>
-            <span className="group-open:rotate-180 transition-transform">▾</span>
+        <details style={{ background: '#141416', borderTop: '1px solid #2A2A32', padding: '8px 16px', flexShrink: 0 }}>
+          <summary style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', color: '#8A8A9A', listStyle: 'none' }}>
+            <span>참여자 {participants.length}명</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>expand_more</span>
           </summary>
-          <div className="pt-2 pb-1 flex flex-wrap gap-2">
+          <div style={{ paddingTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {participants.map(p => (
-              <div key={p.user_id} className="flex items-center gap-1.5 bg-gray-50 rounded-full px-2.5 py-1">
-                <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
-                  {p.users?.nickname?.[0] || '?'}
-                </div>
-                <span className="text-xs font-medium text-gray-700">{p.users?.nickname}</span>
-                <span className={`text-xs font-bold ${mannerColor(p.users?.manner_score ?? 36.5)}`}>
-                  ★{(p.users?.manner_score ?? 36.5).toFixed(1)}
-                </span>
-                {p.user_id === userId && <span className="text-xs text-primary font-semibold">나</span>}
+              <div key={p.user_id} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#1E1E22', borderRadius: 999, padding: '4px 10px', border: p.user_id === userId ? '1px solid rgba(201,242,54,0.3)' : '1px solid #2A2A32' }}>
+                <div style={{ width: 20, height: 20, borderRadius: '50%', background: avatarColor(p.user_id), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff' }}>{p.users?.nickname?.[0] || '?'}</div>
+                <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#e5e2e3' }}>{p.users?.nickname}</span>
+                {p.user_id === userId && <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 10, fontWeight: 700, color: '#c9f236' }}>나</span>}
               </div>
             ))}
           </div>
         </details>
       )}
 
-      {/* 입력창 — 로그인된 사용자면 누구나 표시, API에서 참여 여부 체크 */}
+      {/* Input */}
       {token ? (
-        <div className="bg-white border-t px-3 py-3 flex gap-2 items-end">
+        <div style={{ background: 'rgba(10,10,11,0.95)', backdropFilter: 'blur(12px)', borderTop: '1px solid #2A2A32', padding: '10px 12px', display: 'flex', gap: 8, alignItems: 'flex-end', flexShrink: 0 }}>
           <textarea
-            className="flex-1 input resize-none max-h-24 text-sm py-2.5"
+            style={{ flex: 1, background: '#1E1E22', border: '1px solid #2A2A32', borderRadius: 14, padding: '10px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: 14, color: '#e5e2e3', resize: 'none', maxHeight: 96, outline: 'none', lineHeight: 1.5 }}
             placeholder="메시지를 입력하세요..."
             value={input}
             onChange={e => setInput(e.target.value)}
             rows={1}
             maxLength={500}
-            onKeyDown={e => {
-              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-            }}
+            onFocus={e => (e.target.style.borderColor = '#c9f236')}
+            onBlur={e => (e.target.style.borderColor = '#2A2A32')}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
           />
-          <button
-            onClick={() => sendMessage()}
-            disabled={!input.trim() || sending}
-            className="bg-primary text-white px-4 py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 flex-shrink-0"
-          >
+          <button onClick={() => sendMessage()} disabled={!input.trim() || sending} style={{ height: 44, padding: '0 18px', background: !input.trim() || sending ? '#1E1E22' : '#c9f236', color: !input.trim() || sending ? '#3E3E4A' : '#171e00', borderRadius: 12, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 15, fontWeight: 700, textTransform: 'uppercase', border: 'none', cursor: !input.trim() || sending ? 'default' : 'pointer', transition: 'all 0.2s', flexShrink: 0 }}>
             {sending ? '...' : '전송'}
           </button>
         </div>
       ) : (
-        <div className="bg-gray-50 border-t px-4 py-4 text-center">
-          <p className="text-sm text-gray-400 mb-2">로그인이 필요합니다</p>
-          <button onClick={() => router.push('/login')} className="text-xs text-primary font-semibold">로그인하기 →</button>
+        <div style={{ background: '#141416', borderTop: '1px solid #2A2A32', padding: '16px', textAlign: 'center', flexShrink: 0 }}>
+          <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 14, color: '#8A8A9A', marginBottom: 8 }}>로그인이 필요합니다</p>
+          <button onClick={() => router.push('/login')} style={{ color: '#c9f236', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', background: 'none', border: 'none', cursor: 'pointer' }}>로그인하기 →</button>
         </div>
       )}
     </div>

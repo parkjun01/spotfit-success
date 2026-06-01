@@ -161,30 +161,32 @@ export default function NewSpotPage() {
   const ageError = showErrors && form.minAge && form.maxAge && Number(form.minAge) > Number(form.maxAge);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
-        <button onClick={() => router.back()} className="text-gray-500 text-lg">←</button>
-        <h1 className="text-lg font-bold text-gray-900">스팟 생성</h1>
+    <div style={{ minHeight: '100vh', background: '#131314' }}>
+      <header style={{ position: 'sticky', top: 0, zIndex: 40, height: 64, display: 'flex', alignItems: 'center', gap: 12, padding: '0 16px', background: 'rgba(19,19,20,0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid #2A2A32' }}>
+        <button onClick={() => router.back()} style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c9f236', background: 'transparent', border: 'none', cursor: 'pointer' }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 24 }}>arrow_back</span>
+        </button>
+        <h1 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 22, color: '#c9f236', letterSpacing: '0.05em' }}>스팟 생성</h1>
       </header>
 
       <div className="p-4 space-y-4 pb-32">
 
         {/* 팀장 표시 */}
         <div className="card">
-          <p className="text-xs font-medium text-gray-500 mb-1">팀장</p>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm">
+          <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: '#8A8A9A', marginBottom: 8 }}>HOST</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#c9f236', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Bebas Neue, sans-serif', fontSize: 16, color: '#171e00' }}>
               {hostNickname?.[0] || '?'}
             </div>
-            <span className="font-semibold text-gray-800">{hostNickname || '로딩 중...'}</span>
-            <span className="text-xs text-gray-400 ml-1">(나)</span>
+            <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 16, fontWeight: 700, color: '#e5e2e3' }}>{hostNickname || '로딩 중...'}</span>
+            <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, color: '#c9f236', textTransform: 'uppercase' }}>(나)</span>
           </div>
         </div>
 
         {/* 종목 */}
         <div className={`card space-y-3 ${showErrors && !form.sportId ? 'ring-2 ring-red-400' : ''}`}>
           <div className="flex items-center justify-between">
-            <p className="text-sm font-bold text-gray-800">종목 <span className="text-red-400">*</span></p>
+            <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#e5e2e3', textTransform: 'uppercase' as const }}>종목 <span className="text-red-400">*</span></p>
             {showErrors && !form.sportId && (
               <span className="text-xs text-red-500 font-medium">종목을 선택해주세요</span>
             )}
@@ -196,8 +198,8 @@ export default function NewSpotPage() {
                 onClick={() => set('sportId', s.id)}
                 className={`py-2 px-3 rounded-xl text-sm font-medium border transition-colors ${
                   form.sportId === s.id
-                    ? 'bg-primary text-white border-primary'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-primary'
+                    ? 'bg-primary text-primary-on border-primary'
+                    : 'bg-elevated text-text-secondary border-border-dark hover:border-primary'
                 }`}
               >
                 {s.name}
@@ -208,7 +210,7 @@ export default function NewSpotPage() {
 
         {/* 기본 정보 */}
         <div className="card space-y-3">
-          <p className="text-sm font-bold text-gray-800">기본 정보</p>
+          <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#e5e2e3', textTransform: 'uppercase' as const }}>기본 정보</p>
           <div>
             <label className="text-xs font-medium text-gray-500 mb-1 block">
               제목 <span className="text-red-400">*</span>
@@ -257,20 +259,20 @@ export default function NewSpotPage() {
 
         {/* 인원 */}
         <div className="card space-y-3">
-          <p className="text-sm font-bold text-gray-800">인원수 <span className="text-red-400">*</span></p>
+          <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#e5e2e3', textTransform: 'uppercase' as const }}>인원수 <span className="text-red-400">*</span></p>
           <div className="flex items-center gap-4">
             <button
               onClick={() => set('maxParticipants', String(Math.max(2, parseInt(form.maxParticipants) - 1)))}
-              className="w-10 h-10 rounded-full bg-gray-100 text-gray-700 text-xl font-bold flex items-center justify-center"
+              style={{ width: 40, height: 40, borderRadius: '50%', background: '#1E1E22', color: '#e5e2e3', fontSize: 20, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #2A2A32', cursor: 'pointer' }}
             >
               −
             </button>
-            <span className="text-2xl font-bold text-gray-900 w-16 text-center">
+            <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, color: '#c9f236', width: 64, textAlign: 'center' }}>
               {form.maxParticipants}명
             </span>
             <button
               onClick={() => set('maxParticipants', String(Math.min(50, parseInt(form.maxParticipants) + 1)))}
-              className="w-10 h-10 rounded-full bg-gray-100 text-gray-700 text-xl font-bold flex items-center justify-center"
+              style={{ width: 40, height: 40, borderRadius: '50%', background: '#1E1E22', color: '#e5e2e3', fontSize: 20, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #2A2A32', cursor: 'pointer' }}
             >
               +
             </button>
@@ -281,7 +283,7 @@ export default function NewSpotPage() {
         {/* 날짜 & 시간 */}
         <div className={`card space-y-3 ${showErrors && (!form.date || !form.time) ? 'ring-2 ring-red-400' : ''}`}>
           <div className="flex items-center justify-between">
-            <p className="text-sm font-bold text-gray-800">날짜 & 시간 <span className="text-red-400">*</span></p>
+            <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#e5e2e3', textTransform: 'uppercase' as const }}>날짜 & 시간 <span className="text-red-400">*</span></p>
             {showErrors && (!form.date || !form.time) && (
               <span className="text-xs text-red-500 font-medium">날짜와 시간을 선택해주세요</span>
             )}
@@ -312,7 +314,7 @@ export default function NewSpotPage() {
         {/* 장소 */}
         <div className={`card space-y-3 ${showErrors && (!form.locationName.trim() || !form.latitude) ? 'ring-2 ring-red-400' : ''}`}>
           <div className="flex items-center justify-between">
-            <p className="text-sm font-bold text-gray-800">장소 <span className="text-red-400">*</span></p>
+            <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#e5e2e3', textTransform: 'uppercase' as const }}>장소 <span className="text-red-400">*</span></p>
             {showErrors && !form.locationName.trim() && (
               <span className="text-xs text-red-500 font-medium">장소를 입력해주세요</span>
             )}
@@ -390,7 +392,7 @@ export default function NewSpotPage() {
         {/* 나이 제한 */}
         <div className={`card space-y-3 ${ageError ? 'ring-2 ring-red-400' : ''}`}>
           <div className="flex items-center justify-between">
-            <p className="text-sm font-bold text-gray-800">나이 제한</p>
+            <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#e5e2e3', textTransform: 'uppercase' as const }}>나이 제한</p>
             <span className="text-xs text-gray-400">선택사항</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -442,7 +444,7 @@ export default function NewSpotPage() {
         {tags.length > 0 && (
           <div className="card space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-bold text-gray-800">태그</p>
+              <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#e5e2e3', textTransform: 'uppercase' as const }}>태그</p>
               <span className="text-xs text-gray-400">선택사항 · 최대 5개</span>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -474,7 +476,7 @@ export default function NewSpotPage() {
         {GPX_SPORTS.includes(selectedSportName) && (
           <div className="card space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-bold text-gray-800">📍 GPX 경로 파일 <span className="text-gray-400 font-normal text-xs">(선택사항)</span></p>
+              <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#e5e2e3', textTransform: 'uppercase' as const }}>📍 GPX 경로 파일 <span className="text-gray-400 font-normal text-xs">(선택사항)</span></p>
             </div>
             <p className="text-xs text-gray-400">러닝/등산 코스를 GPX 파일로 공유하면 참여자들이 경로를 미리 확인할 수 있어요.</p>
             <label className={`flex items-center gap-3 p-3 rounded-xl border-2 border-dashed cursor-pointer transition-colors ${
@@ -503,7 +505,7 @@ export default function NewSpotPage() {
         <div className="card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-bold text-gray-800">🚫 노쇼 방지</p>
+              <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#e5e2e3', textTransform: 'uppercase' as const }}>🚫 노쇼 방지</p>
               <p className="text-xs text-gray-400 mt-0.5">참여자가 무단 불참 시 매너점수 차감</p>
             </div>
             <button

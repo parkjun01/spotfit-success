@@ -553,7 +553,7 @@ export default function HomePage() {
 function BottomNav({ active, onMapClick, onListClick }: { active: string; onMapClick?: () => void; onListClick?: () => void }) {
   const tabs = [
     { href: '/', key: 'home', icon: 'home', label: 'Home', onClick: onListClick },
-    { href: '#', key: 'map', icon: 'map', label: 'Explore', onClick: onMapClick },
+    { href: '/', key: 'map', icon: 'map', label: 'Explore', onClick: onMapClick },
     { href: '/spots/new', key: 'host', icon: 'add_box', label: 'Host' },
     { href: '/ranking', key: 'ranking', icon: 'leaderboard', label: 'Ranks' },
     { href: '/benefits', key: 'benefits', icon: 'local_offer', label: '혜택' },
