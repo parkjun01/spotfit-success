@@ -13,6 +13,8 @@ export async function GET(req: NextRequest) {
     const sportId = p.get('sportId');
     const tagIds = p.get('tagIds')?.split(',').filter(Boolean);
     const date = p.get('date');
+    const difficulty = p.get('difficulty');           // beginner | intermediate | advanced
+    const recruitingOnly = p.get('recruiting') === 'true';
     const limit = parseInt(p.get('limit') || '20');
     const offset = parseInt(p.get('offset') || '0');
 
@@ -25,22 +27,29 @@ export async function GET(req: NextRequest) {
       page_limit: limit, page_offset: offset,
     });
 
+    const applyExtraFilters = (list: any[]) => {
+      let result = list;
+      if (difficulty) result = result.filter((s: any) => s.difficulty_level === difficulty);
+      if (recruitingOnly) result = result.filter((s: any) => s.status === 'recruiting');
+      return result;
+    };
+
     if (rpcErr) {
       // RPC 없을 경우 fallback: 기본 쿼리
       let query = supabaseAdmin
         .from('spots')
         .select(`*, sports(name,category), users!host_id(nickname,manner_score,profile_image), spot_tags(tags(id,name))`)
-        .in('status', ['recruiting', 'full'])
+        .in('status', recruitingOnly ? ['recruiting'] : ['recruiting', 'full'])
         .gt('starts_at', new Date().toISOString())
         .order('starts_at', { ascending: true })
         .range(offset, offset + limit - 1);
 
       if (sportId) query = query.eq('sport_id', sportId);
       if (date) query = query.gte('starts_at', `${date}T00:00:00`).lte('starts_at', `${date}T23:59:59`);
+      if (difficulty) query = query.eq('difficulty_level', difficulty);
 
       const { data: spots, error: err2 } = await query;
       if (err2) throw err2;
-      // fallback 결과를 RPC와 동일한 flat 형태로 변환
       const normalized = spots?.map((s: any) => ({
         ...s,
         sport_name: s.sports?.name || '',
@@ -50,7 +59,7 @@ export async function GET(req: NextRequest) {
       return ok(normalized);
     }
 
-    return ok(data);
+    return ok(applyExtraFilters(data || []));
   } catch (err) { return handleError(err); }
 }
 

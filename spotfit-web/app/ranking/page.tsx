@@ -22,8 +22,19 @@ export default function RankingPage() {
   const [sportId, setSportId] = useState('');
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
+  const [myRank, setMyRank] = useState<{ rank: number; score: number; nickname: string } | null>(null);
 
   useEffect(() => { fetch('/api/sports').then(r => r.json()).then(d => setSports(d.data || [])); }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+    if (token) {
+      fetch(`/api/rankings/me`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(d => { if (d.data) setMyRank(d.data); })
+        .catch(() => {});
+    }
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -224,10 +235,21 @@ export default function RankingPage() {
         padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 12,
       }}>
         <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#c9f236' }}>MY RANK</span>
-        <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#1E1E22', border: '2px solid #c9f236', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, color: '#e5e2e3' }}>나</div>
-        <span style={{ flex: 1, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#e5e2e3' }}>내 랭킹</span>
-        <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 20, color: '#c9f236' }}>—</span>
-        <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 10, color: '#8A8A9A', textTransform: 'uppercase' }}>PTS</span>
+        <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#1E1E22', border: '2px solid #c9f236', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, color: '#e5e2e3' }}>
+          {myRank?.nickname?.[0] || '나'}
+        </div>
+        <span style={{ flex: 1, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#e5e2e3' }}>
+          {myRank?.nickname || '내 랭킹'}
+        </span>
+        {myRank ? (
+          <>
+            <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, color: '#8A8A9A' }}>{myRank.rank}위</span>
+            <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 20, color: '#c9f236' }}>{myRank.score}</span>
+            <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 10, color: '#8A8A9A', textTransform: 'uppercase' }}>PTS</span>
+          </>
+        ) : (
+          <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, color: '#8A8A9A' }}>아직 랭킹 없음</span>
+        )}
       </div>
 
       {/* Bottom Nav */}

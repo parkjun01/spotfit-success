@@ -78,6 +78,10 @@ export default function HomePage() {
   const [mapSport, setMapSport] = useState('');
   const [mapRadius, setMapRadius] = useState(5000);
 
+  // 고급 필터
+  const [difficulty, setDifficulty] = useState('');       // '' | 'beginner' | 'intermediate' | 'advanced'
+  const [recruitingOnly, setRecruitingOnly] = useState(false);
+
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mapSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -107,7 +111,7 @@ export default function HomePage() {
     );
   }, []);
 
-  useEffect(() => { if (region) loadSpots(); }, [region, selectedSport, radius]);
+  useEffect(() => { if (region) loadSpots(); }, [region, selectedSport, radius, difficulty, recruitingOnly]);
 
   // 지도뷰 필터 변경 시 스팟 재로드
   useEffect(() => {
@@ -126,7 +130,12 @@ export default function HomePage() {
     if (!region) return;
     setLoading(true);
     try {
-      const params = new URLSearchParams({ lat: String(region.lat), lng: String(region.lng), radius: String(radius), ...(selectedSport && { sportId: selectedSport }) });
+      const params = new URLSearchParams({
+        lat: String(region.lat), lng: String(region.lng), radius: String(radius),
+        ...(selectedSport && { sportId: selectedSport }),
+        ...(difficulty && { difficulty }),
+        ...(recruitingOnly && { recruiting: 'true' }),
+      });
       const res = await fetch(`/api/spots?${params}`);
       const data = await res.json();
       const list = data.data || [];
@@ -303,7 +312,7 @@ export default function HomePage() {
             </div>
             {/* 반경 필터 */}
             <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8A8A9A', marginBottom: 8 }}>반경</p>
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' as const }}>
               {RADIUS_OPTIONS.map(opt => (
                 <button key={opt.value} onClick={() => { setMapRadius(opt.value); setRadius(opt.value); }} style={{
                   flexShrink: 0, padding: '6px 14px', borderRadius: 999,
@@ -313,6 +322,34 @@ export default function HomePage() {
                   border: `1px solid ${mapRadius === opt.value ? '#c9f236' : '#2A2A32'}`,
                   cursor: 'pointer', transition: 'all 0.2s',
                 }}>{opt.label}</button>
+              ))}
+            </div>
+            {/* 난이도 필터 */}
+            <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8A8A9A', marginBottom: 8 }}>난이도</p>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+              {[{ v: '', l: '전체' }, { v: 'beginner', l: '초급' }, { v: 'intermediate', l: '중급' }, { v: 'advanced', l: '고급' }].map(({ v, l }) => (
+                <button key={v} onClick={() => { setDifficulty(v); }} style={{
+                  flexShrink: 0, padding: '6px 14px', borderRadius: 999,
+                  fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, textTransform: 'uppercase',
+                  background: difficulty === v ? '#c9f236' : '#1E1E22',
+                  color: difficulty === v ? '#171e00' : '#8A8A9A',
+                  border: `1px solid ${difficulty === v ? '#c9f236' : '#2A2A32'}`,
+                  cursor: 'pointer', transition: 'all 0.2s',
+                }}>{l}</button>
+              ))}
+            </div>
+            {/* 모집상태 */}
+            <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8A8A9A', marginBottom: 8 }}>모집상태</p>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {[{ v: false, l: '전체' }, { v: true, l: '모집중만' }].map(({ v, l }) => (
+                <button key={String(v)} onClick={() => setRecruitingOnly(v)} style={{
+                  flexShrink: 0, padding: '6px 14px', borderRadius: 999,
+                  fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, textTransform: 'uppercase',
+                  background: recruitingOnly === v ? '#c9f236' : '#1E1E22',
+                  color: recruitingOnly === v ? '#171e00' : '#8A8A9A',
+                  border: `1px solid ${recruitingOnly === v ? '#c9f236' : '#2A2A32'}`,
+                  cursor: 'pointer', transition: 'all 0.2s',
+                }}>{l}</button>
               ))}
             </div>
           </div>
@@ -533,6 +570,29 @@ export default function HomePage() {
               cursor: 'pointer', transition: 'all 0.2s',
             }}>{opt.label}</button>
           ))}
+        </div>
+
+        {/* 난이도 + 모집상태 필터 */}
+        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', padding: '8px 16px 0' }} className="no-scrollbar">
+          {[{ v: '', l: '전체 난이도' }, { v: 'beginner', l: '초급' }, { v: 'intermediate', l: '중급' }, { v: 'advanced', l: '고급' }].map(({ v, l }) => (
+            <button key={v} onClick={() => setDifficulty(v)} style={{
+              flexShrink: 0, padding: '5px 12px', borderRadius: 999,
+              fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
+              background: difficulty === v ? 'rgba(201,242,54,0.15)' : '#1E1E22',
+              color: difficulty === v ? '#c9f236' : '#8A8A9A',
+              border: `1px solid ${difficulty === v ? '#c9f236' : '#2A2A32'}`,
+              cursor: 'pointer', transition: 'all 0.2s',
+            }}>{l}</button>
+          ))}
+          <div style={{ width: 1, background: '#2A2A32', flexShrink: 0, margin: '4px 2px' }} />
+          <button onClick={() => setRecruitingOnly(v => !v)} style={{
+            flexShrink: 0, padding: '5px 12px', borderRadius: 999,
+            fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
+            background: recruitingOnly ? 'rgba(201,242,54,0.15)' : '#1E1E22',
+            color: recruitingOnly ? '#c9f236' : '#8A8A9A',
+            border: `1px solid ${recruitingOnly ? '#c9f236' : '#2A2A32'}`,
+            cursor: 'pointer', transition: 'all 0.2s',
+          }}>모집중만</button>
         </div>
 
         {/* 스팟 목록 */}
