@@ -8,9 +8,10 @@ export async function GET(req: NextRequest) {
     const lng = req.nextUrl.searchParams.get('lng');
     if (!lat || !lng) return error('lat, lng 파라미터가 필요합니다');
 
+    const key = process.env.KAKAO_REST_API_KEY || process.env.Default_Rest_API_Key;
     const res = await fetch(
       `https://dapi.kakao.com/v2/local/geo/coord2regioncode.json?x=${lng}&y=${lat}`,
-      { headers: { Authorization: `KakaoAK ${process.env.KAKAO_REST_API_KEY}` } }
+      { headers: { Authorization: `KakaoAK ${key}` } }
     );
     const data = await res.json();
     const doc = data.documents?.[0];
