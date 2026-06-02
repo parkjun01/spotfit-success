@@ -290,6 +290,10 @@ export default function HomePage() {
     setListSearch(r.name);
     setShowListSearchDrop(false);
     setListSearchResults([]);
+    // 주소 선택 시 지도뷰로 자동 이동
+    setMapSport(selectedSport);
+    setMapRadius(radius);
+    setViewMode('map');
   };
 
   const switchToMap = () => {
@@ -377,16 +381,26 @@ export default function HomePage() {
             {/* 종목 필터 */}
             <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8A8A9A', marginBottom: 8 }}>종목</p>
             <div style={{ display: 'flex', gap: 6, overflowX: 'auto', marginBottom: 12 }} className="no-scrollbar">
-              {[{ id: '', name: 'ALL' }, ...sports].map(s => (
-                <button key={s.id} onClick={() => { setMapSport(s.id); setSelectedSport(s.id); }} style={{
-                  flexShrink: 0, padding: '6px 14px', borderRadius: 999,
-                  fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, textTransform: 'uppercase',
-                  background: mapSport === s.id ? '#c9f236' : '#1E1E22',
-                  color: mapSport === s.id ? '#171e00' : '#8A8A9A',
-                  border: `1px solid ${mapSport === s.id ? '#c9f236' : '#2A2A32'}`,
-                  cursor: 'pointer', transition: 'all 0.2s',
-                }}>{s.name}</button>
-              ))}
+              {[{ id: '', name: 'ALL' }, ...sports].map(s => {
+                const active = mapSport === s.id;
+                return (
+                  <button key={s.id} onClick={() => {
+                    const next = active && s.id !== '' ? '' : s.id;
+                    setMapSport(next); setSelectedSport(next);
+                  }} style={{
+                    flexShrink: 0, padding: '6px 14px', borderRadius: 999,
+                    fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, textTransform: 'uppercase',
+                    background: active ? '#c9f236' : '#1E1E22',
+                    color: active ? '#171e00' : '#8A8A9A',
+                    border: `1px solid ${active ? '#c9f236' : '#2A2A32'}`,
+                    cursor: 'pointer', transition: 'all 0.2s',
+                    display: 'flex', alignItems: 'center', gap: 4,
+                  }}>
+                    {s.name}
+                    {active && s.id !== '' && <span style={{ fontSize: 10, fontWeight: 900 }}>✕</span>}
+                  </button>
+                );
+              })}
             </div>
             {/* 반경 필터 */}
             <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8A8A9A', marginBottom: 8 }}>반경</p>
@@ -630,17 +644,31 @@ export default function HomePage() {
           ].map(s => {
             const active = selectedSport === s.id;
             return (
-              <button key={s.id} onClick={() => setSelectedSport(s.id)} style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                minWidth: 64, padding: '12px 8px',
-                background: active ? 'rgba(201,242,54,0.08)' : '#1E1E22',
-                border: `1px solid ${active ? '#c9f236' : '#2A2A32'}`,
-                borderRadius: 16, flexShrink: 0,
-                fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 600,
-                textTransform: 'uppercase', letterSpacing: '0.06em',
-                color: active ? '#c9f236' : '#8A8A9A',
-                cursor: 'pointer', transition: 'all 0.2s',
-              }}>
+              <button
+                key={s.id}
+                onClick={() => setSelectedSport(active && s.id !== '' ? '' : s.id)}
+                style={{
+                  position: 'relative',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                  minWidth: 64, padding: '12px 8px',
+                  background: active ? 'rgba(201,242,54,0.12)' : '#1E1E22',
+                  border: `1px solid ${active ? '#c9f236' : '#2A2A32'}`,
+                  borderRadius: 16, flexShrink: 0,
+                  fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 600,
+                  textTransform: 'uppercase', letterSpacing: '0.06em',
+                  color: active ? '#c9f236' : '#8A8A9A',
+                  cursor: 'pointer', transition: 'all 0.2s',
+                }}>
+                {/* 선택된 종목에 X 배지 */}
+                {active && s.id !== '' && (
+                  <span style={{
+                    position: 'absolute', top: 4, right: 4,
+                    width: 14, height: 14, borderRadius: '50%',
+                    background: '#c9f236', color: '#171e00',
+                    fontSize: 9, fontWeight: 900, lineHeight: '14px', textAlign: 'center',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>✕</span>
+                )}
                 <span className="material-symbols-outlined" style={{ fontSize: 22 }}>{s.icon}</span>
                 {s.name}
               </button>
