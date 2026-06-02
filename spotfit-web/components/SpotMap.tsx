@@ -14,6 +14,7 @@ interface Props {
   center?: { lat: number; lng: number };
   onSpotClick?: (spot: Spot) => void;
   userLocation?: { lat: number; lng: number };
+  onPopupChange?: (open: boolean) => void;
 }
 
 // 종목별 색상
@@ -55,7 +56,7 @@ const MY_LOCATION_SVG = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent
   </svg>`
 );
 
-export default function SpotMap({ spots, center, onSpotClick, userLocation }: Props) {
+export default function SpotMap({ spots, center, onSpotClick, userLocation, onPopupChange }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
@@ -173,6 +174,7 @@ export default function SpotMap({ spots, center, onSpotClick, userLocation }: Pr
       });
       kakao.maps.event.addListener(marker, 'click', () => {
         setSelectedSpot(spot);
+        onPopupChange?.(true);
       });
       markersRef.current.push(marker);
     });
@@ -263,9 +265,9 @@ export default function SpotMap({ spots, center, onSpotClick, userLocation }: Pr
             </div>
           )}
 
-          {/* 스팟 클릭 팝업 */}
+          {/* 스팟 클릭 팝업 — position:fixed로 정확한 하단 고정 */}
           {selectedSpot && (
-            <div style={{ position: 'absolute', bottom: 180, left: 12, right: 12, zIndex: 35, background: 'rgba(14,14,15,0.97)', border: '1px solid #2A2A32', borderRadius: 16, padding: 16, backdropFilter: 'blur(12px)' }}
+            <div style={{ position: 'fixed', bottom: 88, left: 12, right: 12, zIndex: 999, background: 'rgba(14,14,15,0.98)', border: '1px solid rgba(201,242,54,0.3)', borderRadius: 18, padding: '14px 16px', backdropFilter: 'blur(16px)', boxShadow: '0 -4px 32px rgba(0,0,0,0.6)' }}
               onClick={e => e.stopPropagation()}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -277,7 +279,7 @@ export default function SpotMap({ spots, center, onSpotClick, userLocation }: Pr
                     <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, color: '#c9f236', fontWeight: 600, textTransform: 'uppercase' }}>{selectedSpot.sport_name}</p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedSpot(null)} style={{ background: '#1E1E22', border: 'none', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8A8A9A', fontSize: 16 }}>✕</button>
+                <button onClick={() => { setSelectedSpot(null); onPopupChange?.(false); }} style={{ background: '#1E1E22', border: 'none', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8A8A9A', fontSize: 16 }}>✕</button>
               </div>
 
               <div style={{ display: 'flex', gap: 12, marginBottom: 12, fontSize: 12, color: '#8A8A9A' }}>

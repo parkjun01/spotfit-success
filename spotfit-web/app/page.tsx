@@ -79,6 +79,7 @@ export default function HomePage() {
 
   // 지도뷰 필터 패널
   const [showMapFilter, setShowMapFilter] = useState(false);
+  const [mapPopupOpen, setMapPopupOpen] = useState(false);
   const [mapSport, setMapSport] = useState('');
   const [mapRadius, setMapRadius] = useState(5000);
 
@@ -438,6 +439,7 @@ export default function HomePage() {
             spots={mapSpots}
             center={region ? { lat: region.lat, lng: region.lng } : undefined}
             onSpotClick={(spot) => router.push(`/spots/${spot.id}`)}
+            onPopupChange={setMapPopupOpen}
           />
         </div>
 
@@ -447,8 +449,8 @@ export default function HomePage() {
           <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, color: '#e5e2e3' }}>{mapSpots.length} spots</span>
         </div>
 
-        {/* Bottom Spot Preview Cards */}
-        <div style={{ position: 'fixed', bottom: 'calc(68px + 12px)', left: 0, right: 0, zIndex: 40, padding: '0 16px 8px' }}>
+        {/* Bottom Spot Preview Cards — 팝업 열리면 숨김 */}
+        <div style={{ position: 'fixed', bottom: 'calc(68px + 12px)', left: 0, right: 0, zIndex: 40, padding: '0 16px 8px', display: mapPopupOpen ? 'none' : 'block' }}>
           <div style={{ display: 'flex', gap: 16, overflowX: 'auto', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch', paddingBottom: 4 }} className="no-scrollbar">
             {mapSpots.slice(0, 5).map((spot) => {
               const isFull = spot.status === 'full';
