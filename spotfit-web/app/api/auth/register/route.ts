@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: 'SpotFit <noreply@spotfit.app>', to: [email.toLowerCase().trim()], subject: `[SpotFit] 이메일 인증 코드: ${otp}`, html: emailHtml }),
+        body: JSON.stringify({ from: 'SpotFit <onboarding@resend.dev>', to: [email.toLowerCase().trim()], subject: `[SpotFit] 이메일 인증 코드: ${otp}`, html: emailHtml }),
       }).catch(() => {});
     }
 

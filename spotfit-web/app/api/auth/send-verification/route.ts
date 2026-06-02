@@ -47,7 +47,7 @@ async function sendVerificationEmail(email: string, otp: string, nickname: strin
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'SpotFit <noreply@spotfit.app>',
+      from: 'SpotFit <onboarding@resend.dev>',
       to: [email],
       subject: `[SpotFit] 이메일 인증 코드: ${otp}`,
       html,
