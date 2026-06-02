@@ -92,6 +92,11 @@ export default function SpotMap({ spots, center, onSpotClick, userLocation, onPo
           center: new kakao.maps.LatLng(lat, lng),
           level: 6,
         });
+        // 지도 클릭 시 팝업 닫기
+        kakao.maps.event.addListener(mapInstanceRef.current, 'click', () => {
+          setSelectedSpot(null);
+          onPopupChange?.(false);
+        });
         setStatus('ready');
       } catch (e: any) {
         setStatus('error');
@@ -279,7 +284,7 @@ export default function SpotMap({ spots, center, onSpotClick, userLocation, onPo
                     <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, color: '#c9f236', fontWeight: 600, textTransform: 'uppercase' }}>{selectedSpot.sport_name}</p>
                   </div>
                 </div>
-                <button onClick={() => { setSelectedSpot(null); onPopupChange?.(false); }} style={{ background: '#1E1E22', border: 'none', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8A8A9A', fontSize: 16 }}>✕</button>
+                <button onClick={() => { setSelectedSpot(null); onPopupChange?.(false); }} style={{ background: '#2A2A32', border: '1px solid #3E3E4A', borderRadius: 10, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#e5e2e3', fontSize: 16, flexShrink: 0 }}>✕</button>
               </div>
 
               <div style={{ display: 'flex', gap: 12, marginBottom: 12, fontSize: 12, color: '#8A8A9A' }}>

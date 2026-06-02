@@ -525,15 +525,17 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* FAB */}
-        <Link href="/spots/new" className="lime-glow" style={{
-          position: 'fixed', bottom: 'calc(68px + 100px)', right: 16, zIndex: 50,
-          width: 56, height: 56, borderRadius: '50%', background: '#c9f236',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 4px 24px rgba(201,242,54,0.4), 0 2px 8px rgba(0,0,0,0.4)',
-        }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 32, color: '#171e00', fontWeight: 600 }}>add</span>
-        </Link>
+        {/* FAB — 팝업 열리면 숨김 */}
+        {!mapPopupOpen && (
+          <Link href="/spots/new" className="lime-glow" style={{
+            position: 'fixed', bottom: 'calc(68px + 100px)', right: 16, zIndex: 50,
+            width: 56, height: 56, borderRadius: '50%', background: '#c9f236',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 24px rgba(201,242,54,0.4), 0 2px 8px rgba(0,0,0,0.4)',
+          }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 32, color: '#171e00', fontWeight: 600 }}>add</span>
+          </Link>
+        )}
 
         <BottomNav active="map" onListClick={() => setViewMode('list')} />
       </div>
