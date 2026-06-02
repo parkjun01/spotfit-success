@@ -14,7 +14,7 @@ interface Spot {
   host_nickname: string; host_manner_score: number; distance_meters?: number;
   difficulty_level: string;
 }
-interface Region { name: string; lat: number; lng: number; }
+interface Region { name: string; lat: number; lng: number; category?: string; address?: string; }
 
 const SPORT_EMOJIS: Record<string, string> = {
   '축구': '⚽', '풋살': '⚽', '농구': '🏀', '야구': '⚾', '배드민턴': '🏸',
@@ -179,25 +179,52 @@ export default function HomePage() {
     }, 600);
   };
 
-  // 지도뷰 장소 검색
+  // 지도뷰 장소 검색 — Kakao Maps Services (클라이언트 직접 호출, REST 키 불필요)
   const handleMapSearch = (q: string) => {
     setMapSearch(q);
     if (mapSearchTimer.current) clearTimeout(mapSearchTimer.current);
     if (!q.trim()) { setMapSearchResults([]); setShowMapSearchDrop(false); return; }
-    mapSearchTimer.current = setTimeout(async () => {
+    mapSearchTimer.current = setTimeout(() => {
+      const kakao = (window as any).kakao;
+      if (!kakao?.maps?.services) {
+        // services 라이브러리 아직 미로드 시 재시도
+        setMapSearchResults([]);
+        return;
+      }
       setMapSearching(true);
-      try {
-        const res = await fetch(`/api/geocode?address=${encodeURIComponent(q)}`);
-        const data = await res.json();
-        if (data.success) {
-          setMapSearchResults([{ name: q, lat: data.data.lat, lng: data.data.lng }]);
+      const ps = new kakao.maps.services.Places();
+      ps.keywordSearch(q, (result: any[], status: string) => {
+        setMapSearching(false);
+        if (status === kakao.maps.services.Status.OK && result.length > 0) {
+          const items: Region[] = result.slice(0, 5).map((r: any) => ({
+            name: r.place_name,
+            lat: parseFloat(r.y),
+            lng: parseFloat(r.x),
+            category: r.category_group_name || r.category_name?.split(' > ').pop() || '',
+            address: r.road_address_name || r.address_name || '',
+          }));
+          setMapSearchResults(items);
           setShowMapSearchDrop(true);
         } else {
-          setMapSearchResults([]);
-          setShowMapSearchDrop(false);
+          // 키워드 검색 실패 시 주소 검색으로 fallback
+          const geocoder = new kakao.maps.services.Geocoder();
+          geocoder.addressSearch(q, (addrResult: any[], addrStatus: string) => {
+            if (addrStatus === kakao.maps.services.Status.OK && addrResult.length > 0) {
+              const items: Region[] = addrResult.slice(0, 3).map((r: any) => ({
+                name: r.address_name,
+                lat: parseFloat(r.y),
+                lng: parseFloat(r.x),
+              }));
+              setMapSearchResults(items);
+              setShowMapSearchDrop(true);
+            } else {
+              setMapSearchResults([]);
+              setShowMapSearchDrop(false);
+            }
+          });
         }
-      } finally { setMapSearching(false); }
-    }, 600);
+      });
+    }, 400);
   };
 
   const selectMapLocation = (r: Region) => {
@@ -268,15 +295,22 @@ export default function HomePage() {
 
             {/* 검색 결과 드롭다운 */}
             {showMapSearchDrop && mapSearchResults.length > 0 && (
-              <div style={{ position: 'absolute', top: 46, left: 0, right: 0, background: '#141416', border: '1px solid #2A2A32', borderRadius: 12, zIndex: 100, overflow: 'hidden' }}>
-                {mapSearchResults.map(r => (
-                  <button key={r.name} onClick={() => selectMapLocation(r)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+              <div style={{ position: 'absolute', top: 46, left: 0, right: 0, background: '#141416', border: '1px solid #2A2A32', borderRadius: 12, zIndex: 100, overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
+                <div style={{ padding: '8px 14px 4px', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8A8A9A' }}>
+                  검색 결과 {mapSearchResults.length}개
+                </div>
+                {mapSearchResults.map((r, i) => (
+                  <button key={i} onClick={() => selectMapLocation(r)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'transparent', border: 'none', borderTop: i === 0 ? 'none' : '1px solid rgba(42,42,50,0.5)', cursor: 'pointer', textAlign: 'left' }}
                     onMouseEnter={e => (e.currentTarget.style.background = '#1E1E22')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#c9f236' }}>location_on</span>
-                    <div>
-                      <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, color: '#e5e2e3', fontSize: 14 }}>{r.name}</p>
-                      <p style={{ fontSize: 11, color: '#8A8A9A' }}>이 위치로 지도 이동</p>
+                    <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(201,242,54,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#c9f236' }}>location_on</span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, color: '#e5e2e3', fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</p>
+                      <p style={{ fontSize: 11, color: '#8A8A9A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {r.category ? `${r.category} · ` : ''}{r.address || '이 위치로 지도 이동'}
+                      </p>
                     </div>
                   </button>
                 ))}
