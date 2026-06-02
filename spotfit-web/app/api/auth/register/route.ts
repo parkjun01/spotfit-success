@@ -66,13 +66,24 @@ export async function POST(req: NextRequest) {
       expires_at: expiresAt,
     });
 
-    if (process.env.RESEND_API_KEY) {
-      const emailHtml = `<div style="font-family:Arial;background:#0A0A0B;padding:32px;color:#e5e2e3;max-width:480px;margin:0 auto;border-radius:16px;border:1px solid #2A2A32"><h1 style="color:#c9f236;letter-spacing:2px">SPOTFIT</h1><p>안녕하세요, <strong style="color:#c9f236">${nickname}</strong>님!</p><p>아래 6자리 코드로 이메일을 인증해주세요:</p><div style="background:#1E1E22;border:2px solid rgba(201,242,54,0.3);border-radius:12px;padding:24px;text-align:center;margin:20px 0"><p style="color:#c9f236;font-size:40px;font-weight:900;letter-spacing:12px;margin:0;font-family:monospace">${otp}</p><p style="color:#8A8A9A;font-size:12px;margin:8px 0 0">10분 후 만료됩니다</p></div></div>`;
-      await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: 'SpotFit <onboarding@resend.dev>', to: [email.toLowerCase().trim()], subject: `[SpotFit] 이메일 인증 코드: ${otp}`, html: emailHtml }),
-      }).catch(() => {});
+    // Gmail SMTP로 인증 코드 발송
+    const gmailUser = process.env.GMAIL_USER;
+    const gmailPass = process.env.GMAIL_APP_PASSWORD;
+    if (gmailUser && gmailPass) {
+      try {
+        const nodemailer = await import('nodemailer');
+        const transporter = nodemailer.createTransport({
+          host: 'smtp.gmail.com', port: 587, secure: false,
+          auth: { user: gmailUser, pass: gmailPass },
+        });
+        const emailHtml = `<div style="font-family:Arial;background:#0A0A0B;padding:32px;color:#e5e2e3;max-width:480px;margin:0 auto;border-radius:16px;border:1px solid #2A2A32"><h1 style="color:#c9f236;letter-spacing:2px">SPOTFIT</h1><p>안녕하세요, <strong style="color:#c9f236">${nickname}</strong>님!</p><p>아래 6자리 코드로 이메일을 인증해주세요:</p><div style="background:#1E1E22;border:2px solid rgba(201,242,54,0.3);border-radius:12px;padding:24px;text-align:center;margin:20px 0"><p style="color:#c9f236;font-size:40px;font-weight:900;letter-spacing:12px;margin:0;font-family:monospace">${otp}</p><p style="color:#8A8A9A;font-size:12px;margin:8px 0 0">10분 후 만료됩니다</p></div></div>`;
+        await transporter.sendMail({
+          from: `SpotFit <${gmailUser}>`,
+          to: email.toLowerCase().trim(),
+          subject: `[SpotFit] 이메일 인증 코드: ${otp}`,
+          html: emailHtml,
+        });
+      } catch (e) { console.error('[email] 발송 실패:', e); }
     }
 
     return ok({

@@ -7,8 +7,10 @@ function generateOTP(): string {
 }
 
 async function sendVerificationEmail(email: string, otp: string, nickname: string) {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) throw new Error('RESEND_API_KEY가 설정되지 않았습니다');
+  const gmailUser = process.env.GMAIL_USER;
+  const gmailPass = process.env.GMAIL_APP_PASSWORD;
+
+  if (!gmailUser || !gmailPass) throw new Error('Gmail 환경변수가 설정되지 않았습니다');
 
   const html = `
 <!DOCTYPE html>
@@ -40,24 +42,55 @@ async function sendVerificationEmail(email: string, otp: string, nickname: strin
 </body>
 </html>`;
 
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
+  // Gmail SMTP via fetch (base64 인코딩된 SMTP 명령)
+  const credentials = Buffer.from(`${gmailUser}:${gmailPass}`).toString('base64');
+
+  // Gmail API (REST) 사용
+  const boundary = '----=_SpotFitBoundary';
+  const rawEmail = [
+    `From: SpotFit <${gmailUser}>`,
+    `To: ${email}`,
+    `Subject: [SpotFit] 이메일 인증 코드: ${otp}`,
+    'MIME-Version: 1.0',
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    '',
+    `--${boundary}`,
+    'Content-Type: text/plain; charset=UTF-8',
+    '',
+    `안녕하세요 ${nickname}님! SpotFit 인증 코드: ${otp} (10분 유효)`,
+    '',
+    `--${boundary}`,
+    'Content-Type: text/html; charset=UTF-8',
+    '',
+    html,
+    '',
+    `--${boundary}--`,
+  ].join('\r\n');
+
+  const encoded = Buffer.from(rawEmail).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+  // Google OAuth2 없이 SMTP relay via nodemailer-compatible approach
+  // Gmail SMTP over TLS — use fetch to Gmail's SMTP API endpoint
+  // Since Vercel supports outbound TCP, use direct SMTP via nodemailer
+
+  // nodemailer dynamic import
+  const nodemailer = await import('nodemailer');
+  const transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    auth: {
+      user: gmailUser,
+      pass: gmailPass,
     },
-    body: JSON.stringify({
-      from: 'SpotFit <onboarding@resend.dev>',
-      to: [email],
-      subject: `[SpotFit] 이메일 인증 코드: ${otp}`,
-      html,
-    }),
   });
 
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.message || '이메일 전송 실패');
-  }
+  await transporter.sendMail({
+    from: `SpotFit <${gmailUser}>`,
+    to: email,
+    subject: `[SpotFit] 이메일 인증 코드: ${otp}`,
+    html,
+  });
 }
 
 export async function POST(req: NextRequest) {
