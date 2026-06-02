@@ -6,6 +6,7 @@ declare global { interface Window { daum: any; } }
 
 interface Sport { id: string; name: string; }
 interface Tag { id: string; name: string; classification: string; }
+interface PlaceResult { place_name: string; address_name: string; road_address_name: string; x: string; y: string; }
 
 export default function NewSpotPage() {
   const router = useRouter();
@@ -39,6 +40,10 @@ export default function NewSpotPage() {
   const [hostNickname, setHostNickname] = useState('');
   const [gpxFile, setGpxFile] = useState<File | null>(null);
   const [noShowPrevention, setNoShowPrevention] = useState(false);
+  const [placeQuery, setPlaceQuery] = useState('');
+  const [placeResults, setPlaceResults] = useState<PlaceResult[]>([]);
+  const [placeSearching, setPlaceSearching] = useState(false);
+  const [showPlaceResults, setShowPlaceResults] = useState(false);
 
   const GPX_SPORTS = ['러닝', '등산', '자전거', '클라이밍', '걷기'];
   const SPEED_SPORTS = ['자전거'];
@@ -125,6 +130,42 @@ export default function NewSpotPage() {
     };
 
     tryKakaoGeocoder();
+  };
+
+  const withKakaoServices = (cb: (kakao: any) => void) => {
+    const kakao = (window as any).kakao;
+    if (!kakao) { setError('카카오 SDK가 로드되지 않았습니다'); return; }
+    if (kakao.maps?.services) { cb(kakao); }
+    else if (typeof kakao.maps?.load === 'function') { kakao.maps.load(() => cb(kakao)); }
+    else { setError('장소 검색 서비스를 초기화할 수 없습니다'); }
+  };
+
+  const handlePlaceSearch = () => {
+    if (!placeQuery.trim()) return;
+    setPlaceSearching(true);
+    setShowPlaceResults(false);
+    withKakaoServices(kakao => {
+      const ps = new kakao.maps.services.Places();
+      ps.keywordSearch(placeQuery.trim(), (results: PlaceResult[], status: string) => {
+        setPlaceSearching(false);
+        if (status === kakao.maps.services.Status.OK) {
+          setPlaceResults(results.slice(0, 6));
+          setShowPlaceResults(true);
+        } else {
+          setPlaceResults([]);
+          setError('검색 결과가 없습니다. 다른 검색어를 시도해보세요.');
+        }
+      });
+    });
+  };
+
+  const handleSelectPlace = (place: PlaceResult) => {
+    set('locationName', place.place_name);
+    set('latitude', place.y);
+    set('longitude', place.x);
+    setPlaceQuery(place.place_name);
+    setShowPlaceResults(false);
+    setError('');
   };
 
   const handleSubmit = async () => {
@@ -417,6 +458,55 @@ export default function NewSpotPage() {
             )}
           </div>
 
+          {/* 장소명 키워드 검색 (메인) */}
+          <div>
+            <label style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: '#8A8A9A', marginBottom: 6, display: 'block' }}>장소 검색</label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                className="input flex-1"
+                placeholder="예: 충북대학교, 올림픽공원, 잠실종합운동장"
+                value={placeQuery}
+                onChange={e => { setPlaceQuery(e.target.value); setShowPlaceResults(false); }}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handlePlaceSearch(); } }}
+              />
+              <button
+                type="button"
+                onClick={handlePlaceSearch}
+                disabled={placeSearching}
+                style={{ padding: '0 14px', borderRadius: 10, border: '1px solid #c9f236', color: '#c9f236', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, fontWeight: 700, background: 'rgba(201,242,54,0.08)', cursor: placeSearching ? 'default' : 'pointer', whiteSpace: 'nowrap', opacity: placeSearching ? 0.6 : 1, flexShrink: 0 }}
+              >
+                {placeSearching ? '검색 중...' : '🔍 검색'}
+              </button>
+            </div>
+
+            {/* 검색 결과 목록 */}
+            {showPlaceResults && placeResults.length > 0 && (
+              <div style={{ marginTop: 6, borderRadius: 12, border: '1px solid #2A2A32', overflow: 'hidden', background: '#1A1A1E' }}>
+                {placeResults.map((place, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => handleSelectPlace(place)}
+                    style={{ width: '100%', display: 'block', textAlign: 'left', padding: '10px 14px', borderBottom: i < placeResults.length - 1 ? '1px solid #2A2A32' : 'none', background: 'transparent', cursor: 'pointer', border: 'none' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#22222A')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 15, fontWeight: 700, color: '#e5e2e3', marginBottom: 2 }}>{place.place_name}</p>
+                    <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#8A8A9A' }}>{place.road_address_name || place.address_name}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 구분선 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ flex: 1, height: 1, background: '#2A2A32' }} />
+            <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 11, color: '#4A4A5A' }}>또는</span>
+            <div style={{ flex: 1, height: 1, background: '#2A2A32' }} />
+          </div>
+
+          {/* 도로명 주소 검색 + 현재 위치 */}
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -436,27 +526,28 @@ export default function NewSpotPage() {
                   document.head.appendChild(s);
                 }
               }}
-              style={{ padding: '10px 0', borderRadius: 10, border: '1px solid #c9f236', color: '#c9f236', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, textTransform: 'uppercase', background: 'rgba(201,242,54,0.08)', cursor: 'pointer', transition: 'all 0.2s' }}
+              style={{ padding: '10px 0', borderRadius: 10, border: '1px solid #2A2A32', color: '#8A8A9A', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', background: '#1E1E22', cursor: 'pointer' }}
             >
-              🔍 주소 검색
+              📮 도로명 주소
             </button>
             <button
               type="button"
               onClick={useCurrentLocation}
               disabled={locating}
-              style={{ padding: '10px 0', borderRadius: 10, border: '1px solid #2A2A32', color: '#8A8A9A', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, textTransform: 'uppercase', background: '#1E1E22', cursor: 'pointer', transition: 'all 0.2s', opacity: locating ? 0.5 : 1 }}
+              style={{ padding: '10px 0', borderRadius: 10, border: '1px solid #2A2A32', color: '#8A8A9A', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', background: '#1E1E22', cursor: 'pointer', opacity: locating ? 0.5 : 1 }}
             >
               {locating ? '변환 중...' : '📍 현재 위치'}
             </button>
           </div>
 
+          {/* 선택된 장소명 */}
           <div>
             <label style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: '#8A8A9A', marginBottom: 6, display: 'block' }}>
-              장소 주소 <span className="text-red-400">*</span>
+              선택된 장소명 <span className="text-red-400">*</span>
             </label>
             <input
               className={`input w-full ${invalid(!form.locationName.trim())}`}
-              placeholder="주소 검색 또는 현재 위치 버튼 사용"
+              placeholder="위에서 장소를 검색하거나 직접 입력하세요"
               value={form.locationName}
               onChange={e => set('locationName', e.target.value)}
             />
@@ -478,7 +569,7 @@ export default function NewSpotPage() {
             </p>
           ) : showErrors && form.locationName.trim() ? (
             <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#EF4444' }}>
-              ⚠ 좌표가 없습니다. 주소 검색 또는 현재 위치 버튼을 눌러주세요
+              ⚠ 좌표가 없습니다. 장소 검색 또는 현재 위치 버튼을 눌러주세요
             </p>
           ) : null}
         </div>
