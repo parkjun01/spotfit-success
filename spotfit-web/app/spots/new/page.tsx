@@ -31,6 +31,9 @@ export default function NewSpotPage() {
     minAge: '',
     maxAge: '',
     locationDetail: '',
+    avgSpeed: '',
+    avgPaceMin: '',
+    avgPaceSec: '',
   });
 
   const [hostNickname, setHostNickname] = useState('');
@@ -38,7 +41,11 @@ export default function NewSpotPage() {
   const [noShowPrevention, setNoShowPrevention] = useState(false);
 
   const GPX_SPORTS = ['러닝', '등산', '자전거', '클라이밍', '걷기'];
+  const SPEED_SPORTS = ['자전거'];
+  const PACE_SPORTS = ['등산', '러닝'];
   const selectedSportName = sports.find(s => s.id === form.sportId)?.name || '';
+  const showSpeedInput = SPEED_SPORTS.includes(selectedSportName);
+  const showPaceInput = PACE_SPORTS.includes(selectedSportName);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
@@ -149,6 +156,10 @@ export default function NewSpotPage() {
           minAge: form.minAge ? parseInt(form.minAge) : null,
           maxAge: form.maxAge ? parseInt(form.maxAge) : null,
           tagIds: selectedTagIds,
+          avgSpeed: showSpeedInput && form.avgSpeed ? parseFloat(form.avgSpeed) : null,
+          avgPace: showPaceInput && form.avgPaceMin
+            ? `${form.avgPaceMin}:${(form.avgPaceSec || '0').padStart(2, '0')}`
+            : null,
         }),
       });
       const data = await res.json();
@@ -260,6 +271,80 @@ export default function NewSpotPage() {
             </div>
           </div>
         </div>
+
+        {/* 평균 속도 (자전거) */}
+        {showSpeedInput && (
+          <div className="card space-y-3">
+            <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#e5e2e3', textTransform: 'uppercase' as const }}>
+              🚴 평균 속도 <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#8A8A9A', fontWeight: 400, textTransform: 'none' }}>(선택사항)</span>
+            </p>
+            <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#8A8A9A' }}>참여자들이 페이스를 맞출 수 있도록 예상 평균 속도를 알려주세요.</p>
+            <div className="relative">
+              <input
+                className="input w-full pr-16"
+                type="number"
+                placeholder="예: 25"
+                min={1}
+                max={100}
+                value={form.avgSpeed}
+                onChange={e => set('avgSpeed', e.target.value)}
+              />
+              <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, fontWeight: 700, color: '#c9f236', pointerEvents: 'none' }}>km/h</span>
+            </div>
+            {form.avgSpeed && (
+              <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, color: '#c9f236', fontWeight: 600 }}>
+                ✓ 평균 {form.avgSpeed} km/h 페이스로 진행
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* 평균 페이스 (등산 / 러닝) */}
+        {showPaceInput && (
+          <div className="card space-y-3">
+            <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#e5e2e3', textTransform: 'uppercase' as const }}>
+              {selectedSportName === '등산' ? '🏔️' : '🏃'} 평균 페이스 <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#8A8A9A', fontWeight: 400, textTransform: 'none' }}>(선택사항)</span>
+            </p>
+            <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#8A8A9A' }}>
+              {selectedSportName === '등산'
+                ? '참여자들이 체력에 맞게 준비할 수 있도록 예상 페이스를 알려주세요.'
+                : '참여자들이 속도를 맞출 수 있도록 예상 평균 페이스를 알려주세요.'}
+            </p>
+            <div className="flex items-center gap-3">
+              <div className="flex-1 relative">
+                <input
+                  className="input w-full pr-10"
+                  type="number"
+                  placeholder="5"
+                  min={1}
+                  max={59}
+                  value={form.avgPaceMin}
+                  onChange={e => set('avgPaceMin', e.target.value)}
+                />
+                <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, color: '#8A8A9A', pointerEvents: 'none' }}>분</span>
+              </div>
+              <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 22, color: '#e5e2e3' }}>:</span>
+              <div className="flex-1 relative">
+                <input
+                  className="input w-full pr-10"
+                  type="number"
+                  placeholder="30"
+                  min={0}
+                  max={59}
+                  value={form.avgPaceSec}
+                  onChange={e => set('avgPaceSec', e.target.value)}
+                />
+                <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, color: '#8A8A9A', pointerEvents: 'none' }}>초</span>
+              </div>
+              <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, fontWeight: 700, color: '#c9f236', whiteSpace: 'nowrap' }}>/km</span>
+            </div>
+            {form.avgPaceMin && (
+              <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, color: '#c9f236', fontWeight: 600 }}>
+                ✓ 평균 {form.avgPaceMin}:{(form.avgPaceSec || '0').padStart(2, '0')} /km 페이스로 진행
+              </p>
+            )}
+          </div>
+        )}
 
         {/* 인원 */}
         <div className="card space-y-3">
