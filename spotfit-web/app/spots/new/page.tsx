@@ -85,26 +85,31 @@ export default function NewSpotPage() {
     set('latitude', '');
     set('longitude', '');
 
-    // 클라이언트에서 Kakao Maps SDK Geocoder로 좌표 변환 (REST API 키 불필요)
+    // layout.tsx에서 autoload=false로 SDK를 로드하므로
+    // kakao.maps.load()를 호출해야 services(Geocoder)가 초기화됨
+    const doGeocode = (kakao: any) => {
+      if (kakao.maps?.services) {
+        runGeocoder(kakao);
+      } else if (typeof kakao.maps?.load === 'function') {
+        kakao.maps.load(() => runGeocoder(kakao));
+      } else {
+        setError('주소 좌표 변환 실패. 현재 위치 버튼을 사용해주세요.');
+      }
+    };
+
     const tryKakaoGeocoder = () => {
       const kakao = (window as any).kakao;
-      if (!kakao?.maps?.services) {
-        // SDK 아직 미로드 시 100ms 후 재시도 (최대 20회)
+      if (!kakao) {
         let attempts = 0;
         const wait = setInterval(() => {
           attempts++;
           const k = (window as any).kakao;
-          if (k?.maps?.services) {
-            clearInterval(wait);
-            runGeocoder(k);
-          } else if (attempts >= 20) {
-            clearInterval(wait);
-            setError('주소 좌표 변환 실패. 현재 위치 버튼을 사용해주세요.');
-          }
+          if (k) { clearInterval(wait); doGeocode(k); }
+          else if (attempts >= 50) { clearInterval(wait); setError('카카오 SDK 로드 실패. 현재 위치 버튼을 사용해주세요.'); }
         }, 100);
         return;
       }
-      runGeocoder(kakao);
+      doGeocode(kakao);
     };
 
     const runGeocoder = (kakao: any) => {
