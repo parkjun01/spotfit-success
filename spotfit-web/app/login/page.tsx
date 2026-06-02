@@ -200,7 +200,34 @@ export default function LoginPage() {
                 </div>
                 <div>
                   <label style={D.label}>비밀번호 확인 <span style={{ color: '#EF4444' }}>*</span></label>
-                  <input style={D.input} type="password" placeholder="비밀번호 재입력" value={regForm.passwordConfirm} onChange={e => setRegForm(f => ({ ...f, passwordConfirm: e.target.value }))} onFocus={e => (e.target.style.borderColor = '#c9f236')} onBlur={e => (e.target.style.borderColor = '#2A2A32')} autoComplete="new-password" />
+                  <input
+                    style={{
+                      ...D.input,
+                      borderColor: regForm.passwordConfirm
+                        ? regForm.password === regForm.passwordConfirm ? '#22C55E' : '#EF4444'
+                        : '#2A2A32',
+                    }}
+                    type="password"
+                    placeholder="비밀번호 재입력"
+                    value={regForm.passwordConfirm}
+                    onChange={e => setRegForm(f => ({ ...f, passwordConfirm: e.target.value }))}
+                    onFocus={e => {
+                      if (!regForm.passwordConfirm) e.target.style.borderColor = '#c9f236';
+                    }}
+                    onBlur={e => {
+                      if (!regForm.passwordConfirm) e.target.style.borderColor = '#2A2A32';
+                    }}
+                    autoComplete="new-password"
+                  />
+                  {regForm.passwordConfirm && (
+                    <p style={{
+                      fontSize: 12, marginTop: 5, fontFamily: 'DM Sans, sans-serif',
+                      color: regForm.password === regForm.passwordConfirm ? '#22C55E' : '#EF4444',
+                      display: 'flex', alignItems: 'center', gap: 4,
+                    }}>
+                      {regForm.password === regForm.passwordConfirm ? '✓ 비밀번호가 일치합니다' : '✗ 비밀번호가 일치하지 않습니다'}
+                    </p>
+                  )}
                 </div>
                 {/* 이메일 */}
                 <div>
