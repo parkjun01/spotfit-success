@@ -44,6 +44,7 @@ export default function NewSpotPage() {
   const [placeResults, setPlaceResults] = useState<PlaceResult[]>([]);
   const [placeSearching, setPlaceSearching] = useState(false);
   const [showPlaceResults, setShowPlaceResults] = useState(false);
+  const [selectedPlaceName, setSelectedPlaceName] = useState('');
 
   const GPX_SPORTS = ['러닝', '등산', '자전거', '클라이밍', '걷기'];
   const SPEED_SPORTS = ['자전거'];
@@ -73,6 +74,7 @@ export default function NewSpotPage() {
         const { latitude: lat, longitude: lng } = pos.coords;
         set('latitude', String(lat));
         set('longitude', String(lng));
+        setSelectedPlaceName('');
         try {
           const res = await fetch(`/api/reverse-geocode?lat=${lat}&lng=${lng}`);
           const data = await res.json();
@@ -88,6 +90,7 @@ export default function NewSpotPage() {
     const displayName = result.buildingName?.trim() || result.address;
     set('locationName', displayName);
     set('latitude', '');
+    setSelectedPlaceName('');
     set('longitude', '');
 
     // layout.tsx에서 autoload=false로 SDK를 로드하므로
@@ -160,10 +163,12 @@ export default function NewSpotPage() {
   };
 
   const handleSelectPlace = (place: PlaceResult) => {
-    set('locationName', place.place_name);
+    const roadAddress = place.road_address_name || place.address_name;
+    set('locationName', roadAddress || place.place_name);
     set('latitude', place.y);
     set('longitude', place.x);
     setPlaceQuery(place.place_name);
+    setSelectedPlaceName(place.place_name);
     setShowPlaceResults(false);
     setError('');
   };
@@ -540,16 +545,27 @@ export default function NewSpotPage() {
             </button>
           </div>
 
-          {/* 선택된 장소명 */}
+          {/* 선택된 장소 요약 카드 (키워드 검색으로 선택 시) */}
+          {selectedPlaceName && form.latitude && (
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', background: 'rgba(201,242,54,0.06)', borderRadius: 12, border: '1px solid rgba(201,242,54,0.25)' }}>
+              <span style={{ fontSize: 18, marginTop: 1 }}>📍</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 15, fontWeight: 700, color: '#c9f236', marginBottom: 2 }}>{selectedPlaceName}</p>
+                <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#8A8A9A', wordBreak: 'break-all' }}>{form.locationName}</p>
+              </div>
+            </div>
+          )}
+
+          {/* 도로명 주소 */}
           <div>
             <label style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: '#8A8A9A', marginBottom: 6, display: 'block' }}>
-              선택된 장소명 <span className="text-red-400">*</span>
+              도로명 주소 <span className="text-red-400">*</span>
             </label>
             <input
               className={`input w-full ${invalid(!form.locationName.trim())}`}
               placeholder="위에서 장소를 검색하거나 직접 입력하세요"
               value={form.locationName}
-              onChange={e => set('locationName', e.target.value)}
+              onChange={e => { set('locationName', e.target.value); setSelectedPlaceName(''); }}
             />
           </div>
 
