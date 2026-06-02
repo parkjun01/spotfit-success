@@ -67,6 +67,8 @@ export default function SeedPage() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [log, setLog] = useState<string[]>([]);
   const [created, setCreated] = useState<string[]>([]);
+  const [rankStatus, setRankStatus] = useState<'idle' | 'loading' | 'done'>('idle');
+  const [rankLog, setRankLog] = useState<string[]>([]);
 
   const addLog = (msg: string) => setLog(prev => [...prev, msg]);
 
@@ -129,6 +131,38 @@ export default function SeedPage() {
     setCreated(ids);
     setStatus(ids.length > 0 ? 'done' : 'error');
     addLog(`\n완료: ${ids.length}/${DEMO_SPOTS.length}개 생성`);
+  };
+
+  const createRankings = async () => {
+    const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+    if (!token) { alert('로그인이 필요합니다'); return; }
+    setRankStatus('loading');
+    setRankLog(['랭킹 데이터 생성 중...']);
+    try {
+      const res = await fetch('/api/admin/seed-rankings', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setRankLog(data.data?.log || ['완료']);
+      setRankStatus('done');
+    } catch {
+      setRankLog(['오류 발생']);
+      setRankStatus('idle');
+    }
+  };
+
+  const deleteRankings = async () => {
+    const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+    if (!token || !confirm('랭킹 테스트 데이터를 모두 삭제할까요?')) return;
+    const res = await fetch('/api/admin/seed-rankings', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    alert(data.data?.message || '삭제 완료');
+    setRankStatus('idle');
+    setRankLog([]);
   };
 
   return (
@@ -198,6 +232,64 @@ export default function SeedPage() {
             </button>
           </div>
         )}
+        {/* 랭킹 시드 섹션 */}
+        <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid #2A2A32' }}>
+          <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 22, color: '#c9f236', marginBottom: 4 }}>랭킹 테스트 데이터</h2>
+          <p style={{ fontSize: 13, color: '#8A8A9A', marginBottom: 16, lineHeight: 1.6 }}>
+            랭킹 시연용 가상 유저 6명을 생성합니다.<br/>
+            각자 다른 수의 완료 스팟을 가져 순위가 형성됩니다.
+          </p>
+
+          {/* 미리보기 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+            {[
+              { name: '김민준', score: 60, spots: 6 },
+              { name: '이지은', score: 50, spots: 5 },
+              { name: '박서준', score: 40, spots: 4 },
+              { name: '최유나', score: 30, spots: 3 },
+              { name: '정현우', score: 30, spots: 3 },
+              { name: '강다현', score: 20, spots: 2 },
+            ].map((u, i) => (
+              <div key={i} style={{ background: '#141416', border: '1px solid #2A2A32', borderRadius: 10, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 18, color: i === 0 ? '#c9f236' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : '#8A8A9A', width: 24 }}>{i + 1}</span>
+                <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, color: '#e5e2e3', flex: 1 }}>{u.name}</span>
+                <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, color: '#8A8A9A' }}>스팟 {u.spots}회</span>
+                <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 16, color: '#c9f236' }}>{u.score}pts</span>
+              </div>
+            ))}
+          </div>
+
+          {rankStatus === 'idle' && (
+            <button onClick={createRankings} style={{ width: '100%', height: 48, background: '#1E1E22', color: '#c9f236', borderRadius: 12, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 15, fontWeight: 700, textTransform: 'uppercase', border: '1px solid rgba(201,242,54,0.3)', cursor: 'pointer' }}>
+              랭킹 데이터 생성
+            </button>
+          )}
+
+          {rankStatus === 'loading' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 18, height: 18, border: '3px solid #c9f236', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              <span style={{ color: '#c9f236', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14 }}>생성 중...</span>
+            </div>
+          )}
+
+          {rankLog.length > 0 && (
+            <div style={{ background: '#0A0A0B', border: '1px solid #2A2A32', borderRadius: 10, padding: 14, marginTop: 12, fontFamily: 'monospace', fontSize: 11, lineHeight: 1.8, color: '#c5c9ae', whiteSpace: 'pre-wrap' }}>
+              {rankLog.join('\n')}
+            </div>
+          )}
+
+          {rankStatus === 'done' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+              <button onClick={() => router.push('/ranking')} style={{ height: 44, background: '#c9f236', color: '#171e00', borderRadius: 10, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>
+                랭킹 페이지에서 확인하기 →
+              </button>
+              <button onClick={deleteRankings} style={{ height: 40, background: 'rgba(239,68,68,0.1)', color: '#EF4444', borderRadius: 10, fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer' }}>
+                🗑 랭킹 테스트 데이터 삭제
+              </button>
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );
