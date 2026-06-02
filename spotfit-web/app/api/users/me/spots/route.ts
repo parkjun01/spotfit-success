@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     if (type === 'hosted') {
       const { data, error } = await supabaseAdmin
         .from('spots')
-        .select('*, sports(name), participations(count)')
+        .select('*, sports(name)')
         .eq('host_id', user.id)
         .order('starts_at', { ascending: false })
         .range(offset, offset + limit - 1);

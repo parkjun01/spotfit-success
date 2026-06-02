@@ -72,25 +72,47 @@ export default function NewSpotPage() {
     );
   };
 
-  const handleAddressSelect = async (result: { address: string; sido: string; sigungu: string; buildingName?: string }) => {
-    // 건물명 있으면 건물명 우선, 없으면 도로명 주소
+  const handleAddressSelect = (result: { address: string; sido: string; sigungu: string; buildingName?: string }) => {
     const displayName = result.buildingName?.trim() || result.address;
     set('locationName', displayName);
     set('latitude', '');
     set('longitude', '');
-    try {
-      // 좌표 조회는 전체 주소로 (정확도를 위해)
-      const res = await fetch(`/api/geocode?address=${encodeURIComponent(result.address)}`);
-      const data = await res.json();
-      if (data.success) {
-        set('latitude', String(data.data.lat));
-        set('longitude', String(data.data.lng));
-      } else {
-        setError('주소 좌표를 찾지 못했습니다. 현재 위치 버튼을 대신 사용해주세요.');
+
+    // 클라이언트에서 Kakao Maps SDK Geocoder로 좌표 변환 (REST API 키 불필요)
+    const tryKakaoGeocoder = () => {
+      const kakao = (window as any).kakao;
+      if (!kakao?.maps?.services) {
+        // SDK 아직 미로드 시 100ms 후 재시도 (최대 20회)
+        let attempts = 0;
+        const wait = setInterval(() => {
+          attempts++;
+          const k = (window as any).kakao;
+          if (k?.maps?.services) {
+            clearInterval(wait);
+            runGeocoder(k);
+          } else if (attempts >= 20) {
+            clearInterval(wait);
+            setError('주소 좌표 변환 실패. 현재 위치 버튼을 사용해주세요.');
+          }
+        }, 100);
+        return;
       }
-    } catch {
-      setError('좌표 변환 중 오류가 발생했습니다.');
-    }
+      runGeocoder(kakao);
+    };
+
+    const runGeocoder = (kakao: any) => {
+      const geocoder = new kakao.maps.services.Geocoder();
+      geocoder.addressSearch(result.address, (res: any[], status: string) => {
+        if (status === kakao.maps.services.Status.OK && res.length > 0) {
+          set('latitude', res[0].y);
+          set('longitude', res[0].x);
+        } else {
+          setError('주소 좌표를 찾지 못했습니다. 현재 위치 버튼을 사용해주세요.');
+        }
+      });
+    };
+
+    tryKakaoGeocoder();
   };
 
   const handleSubmit = async () => {

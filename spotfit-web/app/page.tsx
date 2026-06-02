@@ -66,6 +66,10 @@ export default function HomePage() {
 
   // 리스트뷰 검색
   const [listSearch, setListSearch] = useState('');
+  const [listSearchResults, setListSearchResults] = useState<Region[]>([]);
+  const [showListSearchDrop, setShowListSearchDrop] = useState(false);
+  const [listSearching, setListSearching] = useState(false);
+  const listSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 지도뷰 검색
   const [mapSearch, setMapSearch] = useState('');
@@ -154,7 +158,7 @@ export default function HomePage() {
     } catch {}
   };
 
-  // 리스트뷰 검색 필터
+  // 리스트뷰 검색: 키워드로 현재 스팟 필터링
   const filteredSpots = listSearch.trim()
     ? spots.filter(s =>
         s.title.toLowerCase().includes(listSearch.toLowerCase()) ||
@@ -246,6 +250,45 @@ export default function HomePage() {
       ),
       () => alert('위치 권한을 허용해주세요')
     );
+  };
+
+  // 리스트뷰 검색 — Kakao SDK 지역 검색 + 키워드 필터
+  const handleListSearch = (q: string) => {
+    setListSearch(q);
+    if (listSearchTimer.current) clearTimeout(listSearchTimer.current);
+    if (!q.trim()) { setListSearchResults([]); setShowListSearchDrop(false); return; }
+    listSearchTimer.current = setTimeout(() => {
+      const kakao = (window as any).kakao;
+      if (!kakao?.maps?.services) return;
+      setListSearching(true);
+      const ps = new kakao.maps.services.Places();
+      ps.keywordSearch(q, (result: any[], status: string) => {
+        setListSearching(false);
+        if (status === kakao.maps.services.Status.OK && result.length > 0) {
+          // 지역 타입(region)만 필터링 (장소보다 지역 우선)
+          const regions = result.filter((r: any) => r.category_group_code === '' || !r.category_group_code);
+          const items: Region[] = (regions.length > 0 ? regions : result).slice(0, 4).map((r: any) => ({
+            name: r.place_name,
+            lat: parseFloat(r.y),
+            lng: parseFloat(r.x),
+            address: r.road_address_name || r.address_name || '',
+          }));
+          setListSearchResults(items);
+          setShowListSearchDrop(true);
+        } else {
+          setListSearchResults([]);
+          setShowListSearchDrop(false);
+        }
+      });
+    }, 400);
+  };
+
+  const selectListRegion = (r: Region) => {
+    setRegion(r);
+    saveRegion(r);
+    setListSearch(r.name);
+    setShowListSearchDrop(false);
+    setListSearchResults([]);
   };
 
   const switchToMap = () => {
@@ -523,29 +566,54 @@ export default function HomePage() {
           </p>
         </section>
 
-        {/* 검색창 — 실제 필터 연동 */}
+        {/* 검색창 — 지역 검색 + 키워드 필터 */}
         <div style={{ padding: '16px 16px 0' }}>
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <span className="material-symbols-outlined" style={{ position: 'absolute', left: 14, color: '#8A8A9A', fontSize: 22 }}>search</span>
-            <input
-              style={{ width: '100%', background: '#1E1E22', border: '1px solid #2A2A32', borderRadius: 999, padding: '13px 48px 13px 46px', fontFamily: 'DM Sans, sans-serif', fontSize: 14, color: '#e5e2e3', outline: 'none', transition: 'border-color 0.2s' }}
-              placeholder="종목, 지역, 스팟 이름 검색…"
-              value={listSearch}
-              onChange={e => setListSearch(e.target.value)}
-              onFocus={e => (e.target.style.borderColor = '#c9f236')}
-              onBlur={e => (e.target.style.borderColor = '#2A2A32')}
-            />
-            {listSearch ? (
-              <button onClick={() => setListSearch('')} style={{ position: 'absolute', right: 6, width: 36, height: 36, background: '#2A2A32', borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8A8A9A', border: 'none', cursor: 'pointer' }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
-              </button>
-            ) : (
-              <button onClick={switchToMap} style={{ position: 'absolute', right: 6, width: 36, height: 36, background: '#c9f236', borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#171e00', border: 'none', cursor: 'pointer' }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>map</span>
-              </button>
+          <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <span className="material-symbols-outlined" style={{ position: 'absolute', left: 14, color: listSearching ? '#c9f236' : '#8A8A9A', fontSize: 22 }}>search</span>
+              <input
+                style={{ width: '100%', background: '#1E1E22', border: '1px solid #2A2A32', borderRadius: 999, padding: '13px 48px 13px 46px', fontFamily: 'DM Sans, sans-serif', fontSize: 14, color: '#e5e2e3', outline: 'none', transition: 'border-color 0.2s' }}
+                placeholder="지역명, 종목, 스팟 이름 검색…"
+                value={listSearch}
+                onChange={e => handleListSearch(e.target.value)}
+                onFocus={e => { e.target.style.borderColor = '#c9f236'; if (listSearchResults.length > 0) setShowListSearchDrop(true); }}
+                onBlur={e => { e.target.style.borderColor = '#2A2A32'; setTimeout(() => setShowListSearchDrop(false), 150); }}
+              />
+              {listSearch ? (
+                <button onClick={() => { setListSearch(''); setListSearchResults([]); setShowListSearchDrop(false); }} style={{ position: 'absolute', right: 6, width: 36, height: 36, background: '#2A2A32', borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8A8A9A', border: 'none', cursor: 'pointer' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+                </button>
+              ) : (
+                <button onClick={switchToMap} style={{ position: 'absolute', right: 6, width: 36, height: 36, background: '#c9f236', borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#171e00', border: 'none', cursor: 'pointer' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>map</span>
+                </button>
+              )}
+            </div>
+
+            {/* 지역 검색 드롭다운 */}
+            {showListSearchDrop && listSearchResults.length > 0 && (
+              <div style={{ position: 'absolute', top: 52, left: 0, right: 0, background: '#141416', border: '1px solid #2A2A32', borderRadius: 14, zIndex: 50, overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
+                <div style={{ padding: '8px 14px 4px', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8A8A9A' }}>
+                  지역으로 이동
+                </div>
+                {listSearchResults.map((r, i) => (
+                  <button key={i} onMouseDown={() => selectListRegion(r)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'transparent', border: 'none', borderTop: i === 0 ? 'none' : '1px solid rgba(42,42,50,0.5)', cursor: 'pointer', textAlign: 'left' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#1E1E22')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                    <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(201,242,54,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 15, color: '#c9f236' }}>location_on</span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, color: '#e5e2e3', fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</p>
+                      {r.address && <p style={{ fontSize: 11, color: '#8A8A9A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.address}</p>}
+                    </div>
+                  </button>
+                ))}
+              </div>
             )}
           </div>
-          {listSearch && (
+
+          {listSearch && !showListSearchDrop && (
             <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, color: '#8A8A9A', marginTop: 6, paddingLeft: 4 }}>
               "{listSearch}" 검색 결과 {filteredSpots.length}개
             </p>

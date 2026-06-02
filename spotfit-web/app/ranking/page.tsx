@@ -28,10 +28,20 @@ export default function RankingPage() {
 
   useEffect(() => {
     const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+    const stored = localStorage.getItem('user') || sessionStorage.getItem('user');
+    const storedUser = stored ? JSON.parse(stored) : null;
     if (token) {
       fetch(`/api/rankings/me`, { headers: { Authorization: `Bearer ${token}` } })
         .then(r => r.json())
-        .then(d => { if (d.data) setMyRank(d.data); })
+        .then(d => {
+          if (d.data) {
+            setMyRank({
+              rank: 0,  // 전체 순위는 rankings 로드 후 계산
+              score: d.data.activityScore ?? 0,
+              nickname: storedUser?.nickname || '',
+            });
+          }
+        })
         .catch(() => {});
     }
   }, []);
@@ -41,7 +51,19 @@ export default function RankingPage() {
     const params = new URLSearchParams({ type: period, ...(sportId && { sportId }) });
     fetch(`/api/rankings?${params}`)
       .then(r => r.json())
-      .then(d => setRankings(d.data || []))
+      .then(d => {
+        const list = d.data || [];
+        setRankings(list);
+        // 내 순위 계산: rankings 목록에서 내 닉네임 찾기
+        const stored = localStorage.getItem('user') || sessionStorage.getItem('user');
+        if (stored) {
+          const me = JSON.parse(stored);
+          const myIdx = list.findIndex((r: RankEntry) => r.nickname === me.nickname);
+          if (myIdx >= 0) {
+            setMyRank(prev => prev ? { ...prev, rank: myIdx + 1, score: list[myIdx].activityScore || Math.round(list[myIdx].manner_score * 100) } : null);
+          }
+        }
+      })
       .finally(() => setLoading(false));
   }, [period, sportId]);
 
