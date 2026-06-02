@@ -22,6 +22,11 @@ export async function POST(req: NextRequest) {
     const isValid = await bcrypt.compare(password, user.password_hash);
     if (!isValid) return error('아이디 또는 비밀번호가 올바르지 않습니다', 401);
 
+    // 이메일 미인증 체크 (이메일이 있는 신규 가입자만)
+    if (user.email && user.email_verified === false) {
+      return error('이메일 인증이 필요합니다. 가입 시 받은 인증 코드를 확인해주세요.', 403);
+    }
+
     const tokens = signTokens(user.id);
     return ok({
       user: {

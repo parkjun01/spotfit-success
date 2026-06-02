@@ -23,7 +23,7 @@ export default function LoginPage() {
   const [sports, setSports] = useState<Sport[]>([]);
   const [loginForm, setLoginForm] = useState({ username: '', password: '', autoLogin: true });
   const [regForm, setRegForm] = useState({
-    username: '', password: '', passwordConfirm: '',
+    username: '', password: '', passwordConfirm: '', email: '',
     nickname: '', gender: '', age: '',
     activityRegion: '', addressDetail: '', homeLat: 0, homeLng: 0,
     preferredSports: [] as string[],
@@ -53,6 +53,12 @@ export default function LoginPage() {
     try {
       const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: loginForm.username.trim(), password: loginForm.password }) });
       const data = await res.json();
+      if (res.status === 403 && data.message?.includes('이메일 인증')) {
+        // 이메일 미인증 → 인증 페이지로 이동 (이메일 다시 발송)
+        const userRes = await fetch(`/api/auth/check-username/${encodeURIComponent(loginForm.username.trim())}`);
+        setError('이메일 인증이 필요합니다. 가입 시 사용한 이메일을 확인해주세요.');
+        return;
+      }
       if (!res.ok) return setError(data.message || '로그인 실패');
       saveAndRedirect(data.data, loginForm.autoLogin);
     } catch { setError('네트워크 오류가 발생했습니다'); }
@@ -83,6 +89,8 @@ export default function LoginPage() {
       if (!regForm.password) return setError('비밀번호를 입력해주세요');
       if (regForm.password.length < 6) return setError('비밀번호는 6자 이상이어야 합니다');
       if (regForm.password !== regForm.passwordConfirm) return setError('비밀번호가 일치하지 않습니다');
+      if (!regForm.email.trim()) return setError('이메일을 입력해주세요');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regForm.email)) return setError('올바른 이메일 형식이 아닙니다');
     }
     if (step === 2) {
       if (!regForm.nickname.trim()) return setError('닉네임을 입력해주세요');
@@ -96,9 +104,14 @@ export default function LoginPage() {
   const handleRegister = async () => {
     setLoading(true); setError('');
     try {
-      const res = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: regForm.username.trim(), password: regForm.password, nickname: regForm.nickname.trim(), gender: regForm.gender, age: regForm.age ? parseInt(regForm.age) : null, activityRegion: regForm.activityRegion ? regForm.activityRegion + (regForm.addressDetail ? ' ' + regForm.addressDetail : '') : null, homeLat: regForm.homeLat || null, homeLng: regForm.homeLng || null, preferredSports: regForm.preferredSports }) });
+      const res = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: regForm.username.trim(), password: regForm.password, email: regForm.email.trim(), nickname: regForm.nickname.trim(), gender: regForm.gender, age: regForm.age ? parseInt(regForm.age) : null, activityRegion: regForm.activityRegion ? regForm.activityRegion + (regForm.addressDetail ? ' ' + regForm.addressDetail : '') : null, homeLat: regForm.homeLat || null, homeLng: regForm.homeLng || null, preferredSports: regForm.preferredSports }) });
       const data = await res.json();
       if (!res.ok) return setError(data.message || '회원가입 실패');
+      // 이메일 인증 필요한 경우 → 인증 페이지로 이동
+      if (data.data?.needsVerification) {
+        router.push(`/verify-email?email=${encodeURIComponent(data.data.email)}&userId=${data.data.userId}`);
+        return;
+      }
       saveAndRedirect(data.data, true);
     } catch { setError('네트워크 오류가 발생했습니다'); }
     finally { setLoading(false); }
@@ -188,6 +201,23 @@ export default function LoginPage() {
                 <div>
                   <label style={D.label}>비밀번호 확인 <span style={{ color: '#EF4444' }}>*</span></label>
                   <input style={D.input} type="password" placeholder="비밀번호 재입력" value={regForm.passwordConfirm} onChange={e => setRegForm(f => ({ ...f, passwordConfirm: e.target.value }))} onFocus={e => (e.target.style.borderColor = '#c9f236')} onBlur={e => (e.target.style.borderColor = '#2A2A32')} autoComplete="new-password" />
+                </div>
+                {/* 이메일 */}
+                <div>
+                  <label style={D.label}>이메일 <span style={{ color: '#EF4444' }}>*</span></label>
+                  <input
+                    style={D.input}
+                    type="email"
+                    placeholder="example@email.com"
+                    value={regForm.email}
+                    onChange={e => setRegForm(f => ({ ...f, email: e.target.value }))}
+                    onFocus={e => (e.target.style.borderColor = '#c9f236')}
+                    onBlur={e => (e.target.style.borderColor = '#2A2A32')}
+                    autoComplete="email"
+                  />
+                  <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 11, color: '#8A8A9A', marginTop: 6 }}>
+                    📧 가입 후 이메일로 인증 코드가 발송됩니다
+                  </p>
                 </div>
               </div>
             )}
