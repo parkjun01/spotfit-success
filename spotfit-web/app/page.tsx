@@ -50,6 +50,8 @@ function loadRecentRegions(): Region[] {
 
 export default function HomePage() {
   const router = useRouter();
+  const [showSplash, setShowSplash] = useState(true);
+  const [splashFading, setSplashFading] = useState(false);
   const [spots, setSpots] = useState<Spot[]>([]);
   const [sports, setSports] = useState<{ id: string; name: string }[]>([]);
   const [selectedSport, setSelectedSport] = useState('');
@@ -91,6 +93,13 @@ export default function HomePage() {
   const mapSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    const fade = setTimeout(() => setSplashFading(true), 2500);
+    const hide = setTimeout(() => setShowSplash(false), 3000);
+    return () => { clearTimeout(fade); clearTimeout(hide); };
+  }, []);
+
+  useEffect(() => {
+    if (showSplash) return;
     if (!localStorage.getItem('access_token') && !sessionStorage.getItem('access_token')) {
       router.push('/login'); return;
     }
@@ -116,7 +125,7 @@ export default function HomePage() {
     );
   }, []);
 
-  useEffect(() => { if (region) loadSpots(); }, [region, selectedSport, radius, difficulty, recruitingOnly]);
+  useEffect(() => { if (!showSplash && region) loadSpots(); }, [showSplash, region, selectedSport, radius, difficulty, recruitingOnly]);
 
   // 지도뷰 필터 변경 시 스팟 재로드
   useEffect(() => {
@@ -301,6 +310,41 @@ export default function HomePage() {
     setMapSport(selectedSport);
     setMapRadius(radius);
   };
+
+  // ── SPLASH SCREEN ─────────────────────────────────────────
+  if (showSplash) {
+    return (
+      <div style={{
+        position: 'fixed', inset: 0, background: '#131314', zIndex: 9999,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        opacity: splashFading ? 0 : 1,
+        transition: 'opacity 0.5s ease',
+        userSelect: 'none',
+      }}>
+        {/* 배경 글로우 */}
+        <div style={{ position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%,-50%)', width: 320, height: 320, background: 'radial-gradient(circle, rgba(201,242,54,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+        {/* 로고 */}
+        <div className="splash-logo" style={{ textAlign: 'center', marginBottom: 12 }}>
+          <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 80, color: '#c9f236', letterSpacing: '0.06em', lineHeight: 1 }}>
+            SPOTFIT
+          </span>
+        </div>
+
+        {/* 태그라인 */}
+        <p className="splash-tag" style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 600, color: '#8A8A9A', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+          Find Your Spot
+        </p>
+
+        {/* 로딩 도트 */}
+        <div style={{ marginTop: 56, display: 'flex', gap: 10 }}>
+          <div className="splash-dot-0" style={{ width: 8, height: 8, borderRadius: '50%', background: '#c9f236' }} />
+          <div className="splash-dot-1" style={{ width: 8, height: 8, borderRadius: '50%', background: '#c9f236' }} />
+          <div className="splash-dot-2" style={{ width: 8, height: 8, borderRadius: '50%', background: '#c9f236' }} />
+        </div>
+      </div>
+    );
+  }
 
   // ── MAP VIEW ──────────────────────────────────────────────
   if (viewMode === 'map') {
