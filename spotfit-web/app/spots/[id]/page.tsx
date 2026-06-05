@@ -37,6 +37,8 @@ export default function SpotDetailPage() {
   const [cancelling, setCancelling] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [myUserId, setMyUserId] = useState<string | null>(null);
+  const [completing, setCompleting] = useState(false);
+  const [approving, setApproving] = useState<string | null>(null);
   const [showRoute, setShowRoute] = useState(false);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeData, setRouteData] = useState<{
@@ -135,6 +137,31 @@ export default function SpotDetailPage() {
     );
   };
 
+  const handleCompleteSpot = async () => {
+    if (!confirm('스팟을 종료하시겠습니까? 종료 후 팀원 평가가 시작됩니다.')) return;
+    setCompleting(true);
+    try {
+      const res = await fetch(`/api/spots/${id}/complete`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (!data.success) { alert(data.message); return; }
+      window.location.reload();
+    } finally { setCompleting(false); }
+  };
+
+  const handleApprove = async (userId: string, action: 'approve' | 'reject') => {
+    setApproving(userId + action);
+    try {
+      const res = await fetch(`/api/spots/${id}/participants`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ userId, action }),
+      });
+      const data = await res.json();
+      if (!data.success) { alert(data.message); return; }
+      window.location.reload();
+    } finally { setApproving(null); }
+  };
+
   const handleCancelSpot = async () => {
     if (!confirm('스팟을 취소하시겠습니까? 참여자에게 알림이 발송됩니다.')) return;
     setCancelling(true);
@@ -157,10 +184,12 @@ export default function SpotDetailPage() {
   const sportColor = getSportColor(spot.sports?.name);
   const mannerScore = spot.users?.manner_score;
   const participants = spot.participations?.filter((p: any) => p.status === 'joined') || [];
+  const pendingParticipants = spot.participations?.filter((p: any) => p.status === 'pending') || [];
   const isFull = spot.status === 'full';
   const isHost = myUserId && spot.host_id === myUserId;
   const isParticipating = myUserId && participants.some((p: any) => p.user_id === myUserId);
-  const canJoin = !isFull && spot.status === 'recruiting' && !isParticipating && !isHost;
+  const isPending = myUserId && pendingParticipants.some((p: any) => p.user_id === myUserId);
+  const canJoin = !isFull && spot.status === 'recruiting' && !isParticipating && !isHost && !isPending;
   const isActive = ['recruiting', 'full'].includes(spot.status);
   const fillPct = Math.min(100, Math.round((spot.current_participants / spot.max_participants) * 100));
 
@@ -258,6 +287,43 @@ export default function SpotDetailPage() {
           </div>
         )}
 
+        {/* 호스트 전용: 참가 신청 대기자 승인 카드 */}
+        {isHost && pendingParticipants.length > 0 && (
+          <div style={{ ...S.card, borderColor: 'rgba(201,242,54,0.3)', background: 'rgba(201,242,54,0.04)', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#c9f236', display: 'inline-block', boxShadow: '0 0 6px #c9f236' }} />
+              <p style={{ ...S.label, marginBottom: 0, color: '#c9f236' }}>참가 신청 대기 ({pendingParticipants.length}명)</p>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {pendingParticipants.map((p: any) => (
+                <div key={p.user_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#1E1E22', borderRadius: 12, padding: '10px 14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#2A2A32', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#e5e2e3' }}>
+                      {p.users?.nickname?.[0]}
+                    </div>
+                    <div>
+                      <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, color: '#e5e2e3' }}>{p.users?.nickname}</p>
+                      <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 11, color: '#8A8A9A' }}>매너 {p.users?.manner_score?.toFixed(1)}</p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      onClick={() => handleApprove(p.user_id, 'approve')}
+                      disabled={approving !== null}
+                      style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(34,197,94,0.15)', border: '1px solid #22C55E', color: '#22C55E', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 18, transition: 'all 0.2s' }}
+                    >✓</button>
+                    <button
+                      onClick={() => handleApprove(p.user_id, 'reject')}
+                      disabled={approving !== null}
+                      style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(239,68,68,0.15)', border: '1px solid #EF4444', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 18, transition: 'all 0.2s' }}
+                    >✕</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Participants */}
         {participants.length > 0 && (
           <div style={S.card}>
@@ -339,12 +405,23 @@ export default function SpotDetailPage() {
         </Link>
 
         {isHost && isActive ? (
-          <button onClick={handleCancelSpot} disabled={cancelling} style={{ flex: 1, height: 52, borderRadius: 12, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: '#EF4444', fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, fontSize: 16, textTransform: 'uppercase', cursor: 'pointer' }}>
-            {cancelling ? '취소 중...' : '스팟 취소'}
-          </button>
+          <div style={{ flex: 1, display: 'flex', gap: 8 }}>
+            <button onClick={handleCompleteSpot} disabled={completing} style={{ flex: 1, height: 52, borderRadius: 12, background: '#c9f236', color: '#171e00', fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, fontSize: 15, textTransform: 'uppercase', letterSpacing: '0.06em', border: 'none', cursor: 'pointer' }}>
+              {completing ? '종료 중...' : '🏁 종료하기'}
+            </button>
+            <button onClick={handleCancelSpot} disabled={cancelling} style={{ width: 52, height: 52, borderRadius: 12, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: '#EF4444', fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>cancel</span>
+              취소
+            </button>
+          </div>
         ) : isParticipating && isActive ? (
           <button onClick={handleLeave} disabled={leaving} style={{ flex: 1, height: 52, borderRadius: 12, border: '1px solid #2A2A32', background: '#1E1E22', color: '#8A8A9A', fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, fontSize: 16, textTransform: 'uppercase', cursor: 'pointer' }}>
             {leaving ? '처리 중...' : '참여 취소'}
+          </button>
+        ) : isPending ? (
+          <button disabled style={{ flex: 1, height: 52, borderRadius: 12, background: 'rgba(201,242,54,0.1)', border: '1px solid rgba(201,242,54,0.3)', color: '#c9f236', fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, fontSize: 15, textTransform: 'uppercase', cursor: 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#c9f236', animation: 'limePulse 1.5s infinite' }} />
+            호스트 승인 대기 중
           </button>
         ) : canJoin ? (
           <button onClick={handleJoin} disabled={joining || joined} style={{ flex: 1, height: 52, borderRadius: 12, background: joined ? '#22C55E' : '#c9f236', color: joined ? '#fff' : '#171e00', fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, fontSize: 20, textTransform: 'uppercase', letterSpacing: '0.1em', border: 'none', cursor: joined ? 'default' : 'pointer', transition: 'background 0.3s, transform 0.15s' }}>
@@ -352,7 +429,7 @@ export default function SpotDetailPage() {
               <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                 <span style={{ width: 16, height: 16, border: '2px solid #171e00', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
               </span>
-            ) : joined ? '✓ CONFIRMED' : 'JOIN NOW'}
+            ) : joined ? '✓ 신청 완료' : 'JOIN NOW'}
           </button>
         ) : (
           <button disabled style={{ flex: 1, height: 52, borderRadius: 12, background: '#1E1E22', color: '#3E3E4A', fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, fontSize: 16, textTransform: 'uppercase', border: '1px solid #2A2A32', cursor: 'not-allowed' }}>

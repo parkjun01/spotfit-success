@@ -14,18 +14,21 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (spot.current_participants >= spot.max_participants) return error('정원이 초과되었습니다');
     if (parseFloat(user.manner_score) < 30) return error('매너 점수가 부족하여 참여할 수 없습니다', 403);
 
-    // 중복 참여 방지
+    // 중복 신청 방지 (joined 또는 pending 상태 모두 확인)
     const { data: existing } = await supabaseAdmin
-      .from('participations').select('id').eq('spot_id', params.id).eq('user_id', user.id).single();
-    if (existing) return error('이미 참여 중인 스팟입니다');
+      .from('participations')
+      .select('id, status')
+      .eq('spot_id', params.id)
+      .eq('user_id', user.id)
+      .in('status', ['joined', 'pending'])
+      .single();
+    if (existing?.status === 'joined') return error('이미 참여 중인 스팟입니다');
+    if (existing?.status === 'pending') return error('이미 참가 신청을 했습니다. 호스트 승인을 기다려주세요.');
 
-    await supabaseAdmin.from('participations').insert({ spot_id: params.id, user_id: user.id, status: 'joined' });
+    // 참가 신청 — 호스트 승인 대기 상태로 생성
+    await supabaseAdmin.from('participations').insert({ spot_id: params.id, user_id: user.id, status: 'pending' });
 
-    const newCount = spot.current_participants + 1;
-    const newStatus = newCount >= spot.max_participants ? 'full' : 'recruiting';
-    await supabaseAdmin.from('spots').update({ current_participants: newCount, status: newStatus }).eq('id', params.id);
-
-    return ok({ currentParticipants: newCount, status: newStatus });
+    return ok({ status: 'pending', message: '참가 신청이 완료되었습니다. 호스트 승인을 기다려주세요.' });
   } catch (err) { return handleError(err); }
 }
 

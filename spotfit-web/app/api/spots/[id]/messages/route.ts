@@ -32,15 +32,15 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     if (!message?.trim()) return error('메시지를 입력해주세요');
 
-    // 참여자 확인
+    // 승인된 참여자만 메시지 전송 가능
     const { data: part } = await supabaseAdmin
       .from('participations')
-      .select('id')
+      .select('id, status')
       .eq('spot_id', params.id)
       .eq('user_id', user.id)
-      .limit(1)
       .single();
     if (!part) return error('채팅방에 참여한 사용자만 메시지를 보낼 수 있습니다', 403);
+    if (part.status === 'pending') return error('호스트 승인 후 채팅에 참여할 수 있습니다', 403);
 
     const { data, error: err } = await supabaseAdmin
       .from('chat_messages')
