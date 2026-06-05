@@ -30,7 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="max-w-md mx-auto min-h-screen" style={{ background: '#131314' }}>
         {children}
         <Script
-          src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=41f7052cc54daa806a96d14075ab4d57&autoload=false&libraries=services"
+          src={`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_JS_KEY}&autoload=false&libraries=services`}
           strategy="afterInteractive"
         />
         <Script

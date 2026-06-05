@@ -24,7 +24,20 @@ export async function GET(req: NextRequest) {
         sport_filter: sportId || null,
         page_limit: limit,
       });
-      if (!error) return ok(data);
+      if (!error && data) {
+        // RPC 결과에 profile_image 보강
+        const ids = (data as any[]).map((r: any) => r.id).filter(Boolean);
+        if (ids.length > 0) {
+          const { data: profiles } = await supabaseAdmin
+            .from('users')
+            .select('id, profile_image')
+            .in('id', ids);
+          const imgMap: Record<string, string | null> = {};
+          for (const p of profiles || []) imgMap[p.id] = p.profile_image;
+          return ok((data as any[]).map((r: any) => ({ ...r, profile_image: imgMap[r.id] ?? null })));
+        }
+        return ok(data);
+      }
     }
 
     // 직접 쿼리 (지역 필터 or RPC 실패 시 fallback)

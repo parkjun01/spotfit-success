@@ -5,6 +5,7 @@ import Link from 'next/link';
 interface RankEntry {
   id: string; nickname: string; manner_score: number;
   activityScore: number; spotCount: number; subscription_status?: string;
+  profile_image?: string | null;
 }
 
 const NAV = [
@@ -47,7 +48,7 @@ export default function RankingPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [region, setRegion] = useState('');
-  const [myRank, setMyRank] = useState<{ rank: number; score: number; nickname: string } | null>(null);
+  const [myRank, setMyRank] = useState<{ rank: number; score: number; nickname: string; profile_image?: string | null } | null>(null);
   const [seasonDays] = useState(getSeasonDays());
 
   useEffect(() => { fetch('/api/sports').then(r => r.json()).then(d => setSports(d.data || [])); }, []);
@@ -60,7 +61,7 @@ export default function RankingPage() {
       fetch('/api/rankings/me', { headers: { Authorization: `Bearer ${token}` } })
         .then(r => r.json())
         .then(d => {
-          if (d.data) setMyRank({ rank: 0, score: d.data.activityScore ?? 0, nickname: storedUser?.nickname || '' });
+          if (d.data) setMyRank({ rank: 0, score: d.data.activityScore ?? 0, nickname: storedUser?.nickname || '', profile_image: storedUser?.profile_image ?? null });
         }).catch(() => {});
     }
   }, []);
@@ -77,7 +78,7 @@ export default function RankingPage() {
         if (stored) {
           const me = JSON.parse(stored);
           const idx = list.findIndex((r: RankEntry) => r.nickname === me.nickname);
-          if (idx >= 0) setMyRank(prev => prev ? { ...prev, rank: idx + 1, score: list[idx].activityScore || Math.round(list[idx].manner_score * 100) } : null);
+          if (idx >= 0) setMyRank(prev => prev ? { ...prev, rank: idx + 1, score: list[idx].activityScore || Math.round(list[idx].manner_score * 100), profile_image: list[idx].profile_image ?? prev.profile_image } : null);
         }
       }).finally(() => setLoading(false));
   }, [period, sportId, region]);
@@ -191,8 +192,11 @@ export default function RankingPage() {
                       fontSize: Math.round(avSize[rank] / 2.5),
                       color,
                       boxShadow: `0 0 ${isFirst ? 32 : 16}px ${color}50, inset 0 0 16px ${color}10`,
+                      overflow: 'hidden',
                     }}>
-                      {r.nickname?.[0]?.toUpperCase()}
+                      {r.profile_image
+                        ? <img src={r.profile_image} alt={r.nickname} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : r.nickname?.[0]?.toUpperCase()}
                     </div>
                     {/* 티어 뱃지 */}
                     <div style={{
@@ -429,8 +433,11 @@ export default function RankingPage() {
                     fontFamily: 'Bebas Neue, sans-serif', fontSize: 18, fontWeight: 700,
                     color: tier.color,
                     boxShadow: isTop3 ? `0 0 12px ${tier.color}30` : 'none',
+                    overflow: 'hidden',
                   }}>
-                    {r.nickname?.[0]?.toUpperCase()}
+                    {r.profile_image
+                      ? <img src={r.profile_image} alt={r.nickname} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : r.nickname?.[0]?.toUpperCase()}
                   </div>
                   <span style={{ position: 'absolute', bottom: -4, right: -4, fontSize: 14, filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.8))' }}>{tier.icon}</span>
                 </div>
@@ -508,8 +515,11 @@ export default function RankingPage() {
           fontFamily: 'Bebas Neue, sans-serif', fontSize: 15, fontWeight: 700,
           color: myTier.color, flexShrink: 0,
           boxShadow: `0 0 14px ${myTier.glow}`,
+          overflow: 'hidden',
         }}>
-          {myRank?.nickname?.[0]?.toUpperCase() || '?'}
+          {myRank?.profile_image
+            ? <img src={myRank.profile_image} alt={myRank.nickname} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : myRank?.nickname?.[0]?.toUpperCase() || '?'}
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
