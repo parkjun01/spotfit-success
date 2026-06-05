@@ -324,15 +324,20 @@ export default function HomePage() {
         {/* 배경 글로우 */}
         <div style={{ position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%,-50%)', width: 320, height: 320, background: 'radial-gradient(circle, rgba(201,242,54,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
-        {/* 로고 */}
-        <div className="splash-logo" style={{ textAlign: 'center', marginBottom: 12 }}>
-          <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 80, color: '#c9f236', letterSpacing: '0.06em', lineHeight: 1 }}>
+        {/* 로고 이미지 */}
+        <div className="splash-logo" style={{ textAlign: 'center', marginBottom: 20 }}>
+          <img src="/logo.png" alt="SpotFit" style={{ width: 160, height: 'auto' }} />
+        </div>
+
+        {/* 로고 텍스트 */}
+        <div className="splash-tag" style={{ textAlign: 'center', marginBottom: 8 }}>
+          <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 48, color: '#c9f236', letterSpacing: '0.08em', lineHeight: 1 }}>
             SPOTFIT
           </span>
         </div>
 
         {/* 태그라인 */}
-        <p className="splash-tag" style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 600, color: '#8A8A9A', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+        <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, fontWeight: 600, color: '#8A8A9A', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
           Find Your Spot
         </p>
 
@@ -597,7 +602,10 @@ export default function HomePage() {
         background: 'rgba(19,19,20,0.95)', backdropFilter: 'blur(12px)',
         borderBottom: '1px solid #2A2A32',
       }}>
-        <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, color: '#c9f236', letterSpacing: '0.05em', textTransform: 'uppercase' }}>SPOTFIT</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <img src="/logo.png" alt="SpotFit" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+          <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, color: '#c9f236', letterSpacing: '0.05em', textTransform: 'uppercase' }}>SPOTFIT</span>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Link href="/mypage/notifications" style={{ width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e5e2e3', background: 'transparent' }}
             onMouseEnter={e => (e.currentTarget.style.background = '#1E1E22')}
