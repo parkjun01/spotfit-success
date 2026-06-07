@@ -40,6 +40,10 @@ export default function SpotDetailPage() {
   const [completing, setCompleting] = useState(false);
   const [approving, setApproving] = useState<string | null>(null);
   const [showRoute, setShowRoute] = useState(false);
+  const [showReport, setShowReport] = useState(false);
+  const [reportType, setReportType] = useState('');
+  const [reportDesc, setReportDesc] = useState('');
+  const [reporting, setReporting] = useState(false);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeData, setRouteData] = useState<{
     start: { lat: number; lng: number };
@@ -162,6 +166,24 @@ export default function SpotDetailPage() {
     } finally { setApproving(null); }
   };
 
+  const handleReport = async () => {
+    if (!reportType) { alert('신고 유형을 선택해주세요'); return; }
+    setReporting(true);
+    try {
+      const res = await fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ reportedId: spot.host_id, spotId: id, reportType, description: reportDesc }),
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.message || '신고 실패'); return; }
+      alert('신고가 접수되었습니다. 검토 후 조치하겠습니다.');
+      setShowReport(false);
+      setReportType('');
+      setReportDesc('');
+    } finally { setReporting(false); }
+  };
+
   const handleCancelSpot = async () => {
     if (!confirm('스팟을 취소하시겠습니까? 참여자에게 알림이 발송됩니다.')) return;
     setCancelling(true);
@@ -210,10 +232,9 @@ export default function SpotDetailPage() {
           <span className="material-symbols-outlined" style={{ fontSize: 24 }}>arrow_back</span>
         </button>
         <h1 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 20, color: '#c9f236', textTransform: 'uppercase', letterSpacing: '0.06em' }}>SPOT DETAILS</h1>
-        {/* more_vert button — spot-details.html */}
-        <button style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c9f236', background: 'transparent', cursor: 'pointer', border: 'none' }}
-          onClick={() => isHost && isActive && router.push(`/spots/${id}/edit`)}>
-          <span className="material-symbols-outlined" style={{ fontSize: 22 }}>{isHost && isActive ? 'edit' : 'more_vert'}</span>
+        <button style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isHost && isActive ? '#c9f236' : '#8A8A9A', background: 'transparent', cursor: 'pointer', border: 'none' }}
+          onClick={() => { if (isHost && isActive) router.push(`/spots/${id}/edit`); else if (token && !isHost) setShowReport(true); }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 22 }}>{isHost && isActive ? 'edit' : 'flag'}</span>
         </button>
       </header>
 
@@ -234,8 +255,10 @@ export default function SpotDetailPage() {
         {/* Host Row */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 0', borderBottom: '1px solid #2A2A32', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#1E1E22', border: '1px solid #2A2A32', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, fontWeight: 700, color: '#c9f236' }}>
-              {spot.users?.nickname?.[0]}
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#1E1E22', border: '1px solid #2A2A32', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, fontWeight: 700, color: '#c9f236', overflow: 'hidden' }}>
+              {spot.users?.profile_image
+                ? <img src={spot.users.profile_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : spot.users?.nickname?.[0]}
             </div>
             <div>
               <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 14, fontWeight: 700, textTransform: 'uppercase', color: '#c9f236' }}>
@@ -397,6 +420,43 @@ export default function SpotDetailPage() {
           </Link>
         )}
       </div>
+
+      {/* 신고 모달 */}
+      {showReport && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)' }} onClick={() => setShowReport(false)} />
+          <div style={{ position: 'relative', width: '100%', maxWidth: 448, background: '#1E1E22', borderRadius: '20px 20px 0 0', padding: '20px 20px 36px', border: '1px solid #2A2A32' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 18, fontWeight: 700, color: '#EF4444', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🚨 신고하기</p>
+              <button onClick={() => setShowReport(false)} style={{ background: 'none', border: 'none', color: '#8A8A9A', cursor: 'pointer', fontSize: 20 }}>✕</button>
+            </div>
+            <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#6A6A7A', marginBottom: 14 }}>허위 정보나 부적절한 스팟을 신고해주세요. 신고 내용은 익명으로 처리됩니다.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+              {[
+                { key: 'false_info', label: '허위 정보' },
+                { key: 'inappropriate', label: '부적절한 내용' },
+                { key: 'no_show', label: '노쇼 / 불량 매너' },
+                { key: 'spam', label: '스팸 / 광고' },
+                { key: 'other', label: '기타' },
+              ].map(({ key, label }) => (
+                <button key={key} onClick={() => setReportType(key)} style={{ width: '100%', padding: '12px 14px', borderRadius: 10, background: reportType === key ? 'rgba(239,68,68,0.15)' : '#131314', border: `1px solid ${reportType === key ? '#EF4444' : '#2A2A32'}`, color: reportType === key ? '#EF4444' : '#8A8A9A', fontFamily: 'DM Sans, sans-serif', fontSize: 14, fontWeight: 500, textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s' }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <textarea
+              placeholder="추가 설명 (선택)"
+              value={reportDesc}
+              onChange={e => setReportDesc(e.target.value)}
+              rows={3}
+              style={{ width: '100%', background: '#131314', border: '1px solid #2A2A32', borderRadius: 10, padding: '10px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: '#e5e2e3', outline: 'none', resize: 'none', boxSizing: 'border-box', marginBottom: 12 }}
+            />
+            <button onClick={handleReport} disabled={reporting || !reportType} style={{ width: '100%', height: 50, borderRadius: 12, background: reporting || !reportType ? '#2A2A32' : '#EF4444', color: reporting || !reportType ? '#6A6A7A' : '#fff', fontFamily: 'Barlow Condensed, sans-serif', fontSize: 16, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', border: 'none', cursor: reporting || !reportType ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
+              {reporting ? '신고 접수 중...' : '신고 접수'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Bottom CTA */}
       <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 448, padding: 16, background: 'rgba(10,10,11,0.92)', backdropFilter: 'blur(12px)', borderTop: '1px solid #2A2A32', zIndex: 50, display: 'flex', gap: 10 }}>

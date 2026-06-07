@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface Sport { id: string; name: string; }
@@ -12,6 +12,9 @@ export default function EditProfilePage() {
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({ nickname: '', activityRegion: '', preferredSports: [] as string[] });
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
@@ -22,6 +25,7 @@ export default function EditProfilePage() {
     ]).then(([userData, sportsData]) => {
       const user = userData.data;
       setSports(sportsData.data || []);
+      setAvatarUrl(user?.profile_image || null);
       setForm({
         nickname: user?.nickname || '',
         activityRegion: user?.activity_region || '',
@@ -29,6 +33,27 @@ export default function EditProfilePage() {
       });
     }).finally(() => setLoading(false));
   }, []);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { setError('이미지는 2MB 이하여야 합니다'); return; }
+    setAvatarUploading(true);
+    setError('');
+    try {
+      const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/users/me/avatar', {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.message || '업로드 실패'); return; }
+      setAvatarUrl(data.data?.url || null);
+    } finally { setAvatarUploading(false); }
+  };
 
   const toggleSport = (id: string) => setForm(f => ({
     ...f, preferredSports: f.preferredSports.includes(id) ? f.preferredSports.filter(s => s !== id) : [...f.preferredSports, id],
@@ -73,6 +98,32 @@ export default function EditProfilePage() {
       </header>
 
       <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+        {/* Avatar */}
+        <div style={{ background: '#141416', border: '1px solid #2A2A32', borderRadius: 16, padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+          <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#8A8A9A', alignSelf: 'flex-start' }}>프로필 사진</p>
+          <div style={{ position: 'relative' }}>
+            <div style={{ width: 88, height: 88, borderRadius: '50%', background: '#1E1E22', border: '3px solid rgba(201,242,54,0.4)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {avatarUploading ? (
+                <div style={{ width: 28, height: 28, border: '3px solid #c9f236', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              ) : avatarUrl ? (
+                <img src={avatarUrl} alt="프로필" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <span className="material-symbols-outlined" style={{ fontSize: 36, color: '#3E3E4A' }}>person</span>
+              )}
+            </div>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={avatarUploading}
+              style={{ position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderRadius: '50%', background: '#c9f236', border: '2px solid #131314', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 14, color: '#171e00' }}>camera_alt</span>
+            </button>
+          </div>
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarChange} style={{ display: 'none' }} />
+          <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 11, color: '#6A6A7A', textAlign: 'center' }}>JPG, PNG, WEBP · 최대 2MB</p>
+        </div>
+
         {/* Basic Info */}
         <div style={{ background: '#141416', border: '1px solid #2A2A32', borderRadius: 16, padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>

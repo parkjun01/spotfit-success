@@ -61,8 +61,10 @@ export default function MyPage() {
           <div style={{ background: 'linear-gradient(135deg,#1a2200,#141416)', border: '1px solid rgba(201,242,54,0.2)', borderRadius: 20, padding: 20, marginBottom: 12, position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', top: -30, right: -30, width: 140, height: 140, background: 'radial-gradient(circle,rgba(201,242,54,0.1) 0%,transparent 70%)', pointerEvents: 'none' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
-              <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#c9f236', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, color: '#171e00', flexShrink: 0 }}>
-                {user.nickname?.[0]}
+              <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#c9f236', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, color: '#171e00', flexShrink: 0, overflow: 'hidden', border: user.profile_image ? '3px solid rgba(201,242,54,0.5)' : 'none' }}>
+                {user.profile_image
+                  ? <img src={user.profile_image} alt="프로필" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : user.nickname?.[0]}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>

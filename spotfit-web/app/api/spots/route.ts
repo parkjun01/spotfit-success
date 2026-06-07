@@ -73,6 +73,7 @@ export async function POST(req: NextRequest) {
     if (!sportId || !title || !locationName || !latitude || !longitude || !maxParticipants || !startsAt) {
       return error('필수 항목이 누락되었습니다');
     }
+    if (parseFloat(user.manner_score) < 30) return error('매너 점수가 30점 미만이면 스팟을 생성할 수 없습니다', 403);
 
     // 1단계: 기본 필드만으로 스팟 생성 (나이제한 제외)
     const { data: spot, error: insertErr } = await supabaseAdmin
