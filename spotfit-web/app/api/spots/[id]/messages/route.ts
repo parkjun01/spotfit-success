@@ -39,8 +39,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       .eq('spot_id', params.id)
       .eq('user_id', user.id)
       .single();
-    if (!part) return error('채팅방에 참여한 사용자만 메시지를 보낼 수 있습니다', 403);
-    if (part.status === 'pending') return error('호스트 승인 후 채팅에 참여할 수 있습니다', 403);
+    if (!part || part.status !== 'joined') return error('참여한 사용자만 메시지를 보낼 수 있습니다', 403);
 
     const { data, error: err } = await supabaseAdmin
       .from('chat_messages')
