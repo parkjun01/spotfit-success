@@ -433,10 +433,10 @@ export default function SpotDetailPage() {
             <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#6A6A7A', marginBottom: 14 }}>허위 정보나 부적절한 스팟을 신고해주세요. 신고 내용은 익명으로 처리됩니다.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
               {[
-                { key: 'false_info', label: '허위 정보' },
-                { key: 'inappropriate', label: '부적절한 내용' },
+                { key: 'fraud', label: '허위 정보 / 사기' },
+                { key: 'harassment', label: '부적절한 언행 / 괴롭힘' },
                 { key: 'no_show', label: '노쇼 / 불량 매너' },
-                { key: 'spam', label: '스팸 / 광고' },
+                { key: 'profanity', label: '욕설 / 혐오 표현' },
                 { key: 'other', label: '기타' },
               ].map(({ key, label }) => (
                 <button key={key} onClick={() => setReportType(key)} style={{ width: '100%', padding: '12px 14px', borderRadius: 10, background: reportType === key ? 'rgba(239,68,68,0.15)' : '#131314', border: `1px solid ${reportType === key ? '#EF4444' : '#2A2A32'}`, color: reportType === key ? '#EF4444' : '#8A8A9A', fontFamily: 'DM Sans, sans-serif', fontSize: 14, fontWeight: 500, textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s' }}>
