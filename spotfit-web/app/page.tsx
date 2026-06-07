@@ -145,7 +145,7 @@ export default function HomePage() {
     } else if (!saved) {
       setRegion({ name: '서울 중구', lat: 37.5665, lng: 126.978 });
     }
-  }, []);
+  }, [showSplash]);
 
   useEffect(() => { if (!showSplash && region) loadSpots(); }, [showSplash, region, selectedSport, radius, difficulty, recruitingOnly]);
 
