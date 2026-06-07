@@ -33,10 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           src={`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_JS_KEY}&autoload=false&libraries=services`}
           strategy="afterInteractive"
         />
-        <Script
-          src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"
-          strategy="lazyOnload"
-        />
+
       </body>
     </html>
   );
