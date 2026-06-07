@@ -30,6 +30,29 @@ export async function POST(req: NextRequest) {
     const { data: spot } = await supabaseAdmin.from('spots').select('status').eq('id', spotId).single();
     if (!spot || spot.status !== 'completed') return error('종료된 스팟만 평가할 수 있습니다');
 
+    // 평가자가 실제로 해당 스팟에 참가했는지 확인
+    const { data: evaluatorPart } = await supabaseAdmin
+      .from('participations')
+      .select('status')
+      .eq('spot_id', spotId)
+      .eq('user_id', user.id)
+      .single();
+    if (!evaluatorPart || evaluatorPart.status === 'cancelled')
+      return error('해당 스팟 참가자만 평가할 수 있습니다', 403);
+
+    // 피평가자가 실제로 해당 스팟에 참가했는지 확인
+    const { data: evaluatedPart } = await supabaseAdmin
+      .from('participations')
+      .select('status')
+      .eq('spot_id', spotId)
+      .eq('user_id', evaluatedId)
+      .single();
+    if (!evaluatedPart || evaluatedPart.status === 'cancelled')
+      return error('평가 대상이 해당 스팟의 참가자가 아닙니다', 400);
+
+    // 자기 자신 평가 방지
+    if (user.id === evaluatedId) return error('자기 자신은 평가할 수 없습니다', 400);
+
     const { error: insertErr } = await supabaseAdmin.from('evaluations').insert({
       spot_id: spotId, evaluator_id: user.id, evaluated_id: evaluatedId,
       is_positive: isPositive, score_items: scoreItems,
