@@ -68,7 +68,8 @@ export default function SpotDetailPage() {
       const data = await res.json();
       if (!data.success) { alert(data.message); return; }
       setJoined(true);
-      setTimeout(() => router.push(`/spots/${id}/chat`), 1200);
+      // pending 상태: 채팅으로 이동하지 않고 페이지 새로고침해서 "대기 중" 버튼 표시
+      setTimeout(() => window.location.reload(), 1200);
     } finally { setJoining(false); }
   };
 
@@ -489,7 +490,7 @@ export default function SpotDetailPage() {
               <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                 <span style={{ width: 16, height: 16, border: '2px solid #171e00', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
               </span>
-            ) : joined ? '✓ 신청 완료' : 'JOIN NOW'}
+            ) : joined ? '⏳ 승인 대기 중' : 'JOIN NOW'}
           </button>
         ) : (
           <button disabled style={{ flex: 1, height: 52, borderRadius: 12, background: '#1E1E22', color: '#3E3E4A', fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, fontSize: 16, textTransform: 'uppercase', border: '1px solid #2A2A32', cursor: 'not-allowed' }}>
