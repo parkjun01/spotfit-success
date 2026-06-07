@@ -50,7 +50,10 @@ function loadRecentRegions(): Region[] {
 
 export default function HomePage() {
   const router = useRouter();
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return sessionStorage.getItem('show_splash') === '1';
+  });
   const [splashFading, setSplashFading] = useState(false);
   const [spots, setSpots] = useState<Spot[]>([]);
   const [sports, setSports] = useState<{ id: string; name: string }[]>([]);
@@ -94,6 +97,8 @@ export default function HomePage() {
   const mapSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    if (!showSplash) return;
+    sessionStorage.removeItem('show_splash');
     const fade = setTimeout(() => setSplashFading(true), 2500);
     const hide = setTimeout(() => setShowSplash(false), 3000);
     return () => { clearTimeout(fade); clearTimeout(hide); };

@@ -43,6 +43,7 @@ export default function LoginPage() {
     storage.setItem('access_token', data.access);
     storage.setItem('refresh_token', data.refresh);
     storage.setItem('user', JSON.stringify(data.user));
+    sessionStorage.setItem('show_splash', '1');
     router.push('/');
   };
 
