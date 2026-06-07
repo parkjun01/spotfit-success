@@ -41,19 +41,18 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const isHost = spot?.host_id === user.id;
 
     if (!isHost) {
-      // 가장 최신 참여 상태 확인 (중복 레코드 edge case 대비: limit 1)
+      // 모든 참여 레코드 조회 (중복 레코드 대비 — joined 우선 확인)
       const { data: parts } = await supabaseAdmin
         .from('participations')
         .select('id, status')
         .eq('spot_id', params.id)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1);
+        .eq('user_id', user.id);
 
-      const part = parts?.[0];
-      if (!part) return error('스팟에 참여하지 않은 사용자입니다', 403);
-      if (part.status === 'pending') return error('호스트의 승인을 기다리는 중입니다. 승인 후 채팅에 참여할 수 있습니다.', 403);
-      if (part.status !== 'joined') return error('참여 승인된 사용자만 메시지를 보낼 수 있습니다', 403);
+      if (!parts || parts.length === 0) return error('스팟에 참여하지 않은 사용자입니다', 403);
+      const isJoined = parts.some(p => p.status === 'joined');
+      const isPending = parts.some(p => p.status === 'pending');
+      if (!isJoined && isPending) return error('호스트의 승인을 기다리는 중입니다. 승인 후 채팅에 참여할 수 있습니다.', 403);
+      if (!isJoined) return error('참여 승인된 사용자만 메시지를 보낼 수 있습니다', 403);
     }
 
     const { data, error: err } = await supabaseAdmin

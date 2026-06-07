@@ -50,6 +50,7 @@ export default function SpotChatPage() {
   const [pageError, setPageError] = useState<string | null>(null);
   const [showApprovalPanel, setShowApprovalPanel] = useState(false);
   const [approving, setApproving] = useState<string | null>(null);
+  const [checkingApproval, setCheckingApproval] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<any>(null);
@@ -106,6 +107,28 @@ export default function SpotChatPage() {
       setLoading(false);
     }
   }, [id]);
+
+  // 승인 대기 중일 때 3초마다 상태 확인 — 승인되면 자동으로 채팅 화면으로 전환
+  useEffect(() => {
+    if (role !== 'pending' || !userId) return;
+    const check = () => {
+      setCheckingApproval(true);
+      fetch(`/api/spots/${id}`)
+        .then(r => r.json())
+        .then(d => {
+          const allParts = d.data?.participations || [];
+          const myPart = allParts.find((p: any) => p.user_id === userId);
+          if (myPart?.status === 'joined') {
+            setRole('joined');
+            setParticipants(allParts.filter((p: any) => p.status === 'joined'));
+          }
+        })
+        .catch(() => {})
+        .finally(() => setCheckingApproval(false));
+    };
+    const timer = setInterval(check, 3000);
+    return () => clearInterval(timer);
+  }, [role, userId, id]);
 
   // Supabase Realtime
   useEffect(() => {
@@ -272,13 +295,20 @@ export default function SpotChatPage() {
         {/* 승인 대기 배너 */}
         <div style={{ background: 'rgba(10,10,11,0.95)', backdropFilter: 'blur(12px)', borderTop: '1px solid #2A2A32', padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
           <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(201,242,54,0.1)', border: '2px solid rgba(201,242,54,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 26, color: '#c9f236' }}>hourglass_top</span>
+            {checkingApproval
+              ? <div style={{ width: 22, height: 22, border: '3px solid #c9f236', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              : <span className="material-symbols-outlined" style={{ fontSize: 26, color: '#c9f236' }}>hourglass_top</span>
+            }
           </div>
           <div style={{ textAlign: 'center' }}>
             <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 17, fontWeight: 700, color: '#ffffef', marginBottom: 4 }}>호스트 승인 대기 중</p>
-            <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: '#8A8A9A', lineHeight: 1.5 }}>팀장이 참여를 승인하면<br/>채팅에 참여할 수 있습니다</p>
+            <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: '#8A8A9A', lineHeight: 1.5 }}>팀장이 참여를 승인하면<br/>자동으로 채팅에 연결됩니다</p>
+            <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 11, color: '#3E3E4A', marginTop: 8 }}>3초마다 자동 확인 중...</p>
           </div>
-          <button onClick={() => router.back()} style={{ padding: '10px 28px', background: 'transparent', border: '1px solid #2A2A32', borderRadius: 10, fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, fontSize: 14, color: '#8A8A9A', cursor: 'pointer' }}>돌아가기</button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => window.location.reload()} style={{ padding: '10px 20px', background: 'rgba(201,242,54,0.1)', border: '1px solid rgba(201,242,54,0.3)', borderRadius: 10, fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, fontSize: 13, color: '#c9f236', cursor: 'pointer' }}>새로고침</button>
+            <button onClick={() => router.back()} style={{ padding: '10px 20px', background: 'transparent', border: '1px solid #2A2A32', borderRadius: 10, fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, fontSize: 13, color: '#8A8A9A', cursor: 'pointer' }}>돌아가기</button>
+          </div>
         </div>
       </div>
     );
