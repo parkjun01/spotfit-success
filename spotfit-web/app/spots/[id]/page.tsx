@@ -60,6 +60,20 @@ export default function SpotDetailPage() {
     fetch(`/api/spots/${id}`).then(r => r.json()).then(d => setSpot(d.data)).finally(() => setLoading(false));
   }, [id]);
 
+  // 호스트인 경우 5초마다 신청 대기 목록 자동 갱신
+  useEffect(() => {
+    const stored = localStorage.getItem('user') || sessionStorage.getItem('user');
+    const uid = stored ? JSON.parse(stored).id : null;
+    if (!uid || !spot || spot.host_id !== uid) return;
+    const timer = setInterval(() => {
+      fetch(`/api/spots/${id}`)
+        .then(r => r.json())
+        .then(d => { if (d.data) setSpot(d.data); })
+        .catch(() => {});
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [id, spot?.host_id]);
+
   const handleJoin = async () => {
     if (!token) { router.push('/login'); return; }
     setJoining(true);
