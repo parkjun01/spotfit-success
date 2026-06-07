@@ -30,11 +30,31 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
 
     // pending 상태로 신청 (참가자 수는 팀장 승인 후 증가)
-    await supabaseAdmin.from('participations').insert({
+    const { error: insertErr } = await supabaseAdmin.from('participations').insert({
       spot_id: params.id,
       user_id: user.id,
       status: 'pending',
     });
+
+    if (insertErr) {
+      console.error('[join] insert error:', insertErr.message, insertErr.code);
+      // DB constraint에 pending이 없으면 joined로 fallback
+      if (insertErr.code === '23514') {
+        const { error: fallbackErr } = await supabaseAdmin.from('participations').insert({
+          spot_id: params.id,
+          user_id: user.id,
+          status: 'joined',
+        });
+        if (fallbackErr) throw fallbackErr;
+        const newCount = spot.current_participants + 1;
+        await supabaseAdmin.from('spots').update({
+          current_participants: newCount,
+          status: newCount >= spot.max_participants ? 'full' : 'recruiting',
+        }).eq('id', params.id);
+        return ok({ status: 'joined', message: '참가가 완료되었습니다!' });
+      }
+      throw insertErr;
+    }
 
     return ok({ status: 'pending', message: '신청이 완료되었습니다! 팀장의 승인을 기다려주세요.' });
   } catch (err) { return handleError(err); }
