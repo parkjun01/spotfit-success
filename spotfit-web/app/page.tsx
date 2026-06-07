@@ -65,6 +65,7 @@ export default function HomePage() {
   const [searching, setSearching] = useState(false);
   const [recentRegions, setRecentRegions] = useState<Region[]>([]);
   const [spotCount, setSpotCount] = useState(0);
+  const [geolocating, setGeolocating] = useState(false);
 
   // 리스트뷰 검색
   const [listSearch, setListSearch] = useState('');
@@ -105,24 +106,45 @@ export default function HomePage() {
     }
     fetch('/api/sports').then(r => r.json()).then(d => setSports(d.data || []));
     setRecentRegions(loadRecentRegions());
+
+    // saved region을 임시 초기값으로 (스팟 즉시 로드용)
     const saved = loadRegion();
-    if (saved) { setRegion(saved); return; }
-    try {
-      const stored = localStorage.getItem('user') || sessionStorage.getItem('user');
-      if (stored) {
-        const u = JSON.parse(stored);
-        if (u.homeLat && u.homeLng) {
-          reverseGeocode(u.homeLat, u.homeLng).then(name => setRegion({ name, lat: u.homeLat, lng: u.homeLng }));
-          return;
-        }
-      }
-    } catch {}
-    navigator.geolocation?.getCurrentPosition(
-      pos => reverseGeocode(pos.coords.latitude, pos.coords.longitude).then(name =>
-        setRegion({ name, lat: pos.coords.latitude, lng: pos.coords.longitude })
-      ),
-      () => setRegion({ name: '서울 중구', lat: 37.5665, lng: 126.978 })
-    );
+    if (saved) setRegion(saved);
+
+    // 항상 실제 현재 위치 감지 시도
+    if (navigator.geolocation) {
+      setGeolocating(true);
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          reverseGeocode(pos.coords.latitude, pos.coords.longitude).then(name => {
+            setRegion({ name, lat: pos.coords.latitude, lng: pos.coords.longitude });
+            setGeolocating(false);
+          });
+        },
+        () => {
+          setGeolocating(false);
+          if (!saved) {
+            // 위치 권한 거부 시 — 홈 위치 또는 서울 중구 fallback
+            try {
+              const stored = localStorage.getItem('user') || sessionStorage.getItem('user');
+              if (stored) {
+                const u = JSON.parse(stored);
+                if (u.homeLat && u.homeLng) {
+                  reverseGeocode(u.homeLat, u.homeLng).then(name =>
+                    setRegion({ name, lat: u.homeLat, lng: u.homeLng })
+                  );
+                  return;
+                }
+              }
+            } catch {}
+            setRegion({ name: '서울 중구', lat: 37.5665, lng: 126.978 });
+          }
+        },
+        { timeout: 10000, maximumAge: 60000 }
+      );
+    } else if (!saved) {
+      setRegion({ name: '서울 중구', lat: 37.5665, lng: 126.978 });
+    }
   }, []);
 
   useEffect(() => { if (!showSplash && region) loadSpots(); }, [showSplash, region, selectedSport, radius, difficulty, recruitingOnly]);
@@ -506,10 +528,18 @@ export default function HomePage() {
           />
         </div>
 
-        {/* 스팟 수 배지 */}
-        <div style={{ position: 'fixed', top: showMapFilter ? 180 : 76, left: 16, zIndex: 38, background: 'rgba(20,20,22,0.9)', border: '1px solid #2A2A32', borderRadius: 20, padding: '4px 12px', display: 'flex', alignItems: 'center', gap: 6, transition: 'top 0.2s' }}>
-          <div style={{ width: 6, height: 6, background: '#c9f236', borderRadius: '50%' }} />
-          <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, color: '#e5e2e3' }}>{mapSpots.length} spots</span>
+        {/* 스팟 수 배지 + geolocation 상태 */}
+        <div style={{ position: 'fixed', top: showMapFilter ? 180 : 76, left: 16, zIndex: 38, display: 'flex', gap: 6, transition: 'top 0.2s' }}>
+          <div style={{ background: 'rgba(20,20,22,0.9)', border: '1px solid #2A2A32', borderRadius: 20, padding: '4px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ width: 6, height: 6, background: '#c9f236', borderRadius: '50%' }} />
+            <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 700, color: '#e5e2e3' }}>{mapSpots.length} spots</span>
+          </div>
+          {geolocating && (
+            <div style={{ background: 'rgba(201,242,54,0.12)', border: '1px solid rgba(201,242,54,0.4)', borderRadius: 20, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 10, height: 10, border: '2px solid #c9f236', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 11, fontWeight: 700, color: '#c9f236' }}>위치 탐색 중</span>
+            </div>
+          )}
         </div>
 
         {/* Bottom Spot Preview Cards — 팝업 열리면 숨김 */}
@@ -623,10 +653,22 @@ export default function HomePage() {
         <section style={{ background: 'linear-gradient(160deg,#1a1f00 0%,#131314 55%)', padding: '40px 16px 36px', position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: -40, right: -40, width: 260, height: 260, background: 'radial-gradient(circle,rgba(200,241,53,0.18) 0%,transparent 70%)', pointerEvents: 'none' }} />
           <button onClick={() => setShowRegionSheet(true)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: 6 }}>
-            <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#c5c9ae' }}>
-              {region?.name || '서울'} · 오늘
-            </p>
-            <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#8A8A9A' }}>expand_more</span>
+            {geolocating ? (
+              <>
+                <div style={{ width: 12, height: 12, border: '2px solid #c9f236', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+                <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#c9f236' }}>
+                  현재 위치 탐색 중…
+                </p>
+              </>
+            ) : (
+              <>
+                <span className="material-symbols-outlined" style={{ fontSize: 14, color: '#c9f236' }}>my_location</span>
+                <p style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#c5c9ae' }}>
+                  {region?.name || '서울'} · 오늘
+                </p>
+                <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#8A8A9A' }}>expand_more</span>
+              </>
+            )}
           </button>
           <h1 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 52, lineHeight: 0.95, color: '#c9f236', textTransform: 'uppercase', letterSpacing: '0.02em', marginBottom: 12 }}>
             FIND<br/><span style={{ color: '#e5e2e3' }}>YOUR</span><br/>SPOT
