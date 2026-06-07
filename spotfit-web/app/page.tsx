@@ -17,17 +17,17 @@ interface Spot {
 interface Region { name: string; lat: number; lng: number; category?: string; address?: string; }
 
 const SPORT_EMOJIS: Record<string, string> = {
-  '축구': '⚽', '풋살': '⚽', '농구': '🏀', '야구': '⚾', '배드민턴': '🏸',
-  '테니스': '🎾', '탁구': '🏓', '수영': '🏊', '러닝': '🏃', '등산': '🧗',
-  '클라이밍': '🧗', '요가': '🧘', '필라테스': '🤸', '헬스': '💪', '골프': '⛳',
+  '축구': '⚽', '풋살': '⚽', '농구': '🏀', '배드민턴': '🏸',
+  '테니스': '🎾', '탁구': '🏓', '러닝': '🏃', '등산': '🧗',
+  '클라이밍': '🧗', '요가': '🧘', '필라테스': '🤸', '헬스': '💪',
   '볼링': '🎳', '배구': '🏐', '핸드볼': '🤾',
 };
 const SPORT_ICONS: Record<string, string> = {
   '축구': 'sports_soccer', '풋살': 'sports_soccer', '농구': 'sports_basketball',
-  '야구': 'sports_baseball', '배드민턴': 'sports_badminton', '테니스': 'sports_tennis',
-  '탁구': 'sports_tennis', '수영': 'pool', '러닝': 'directions_run', '등산': 'landscape',
+  '배드민턴': 'sports_badminton', '테니스': 'sports_tennis',
+  '탁구': 'sports_tennis', '러닝': 'directions_run', '등산': 'landscape',
   '클라이밍': 'landscape', '요가': 'self_improvement', '필라테스': 'self_improvement',
-  '헬스': 'fitness_center', '골프': 'golf_course', '볼링': 'sports', '배구': 'sports_volleyball', '핸드볼': 'sports_handball',
+  '헬스': 'fitness_center', '볼링': 'sports', '배구': 'sports_volleyball', '핸드볼': 'sports_handball',
 };
 const RADIUS_OPTIONS = [
   { label: '500m', value: 500 }, { label: '1km', value: 1000 },
