@@ -5,6 +5,7 @@ import { ok, created, error, handleError } from '@/lib/response';
 
 // GET /api/spots — 주변 스팟 조회 (Supabase PostGIS RPC 사용)
 export async function GET(req: NextRequest) {
+  const _t = Date.now();
   try {
     const p = req.nextUrl.searchParams;
     const lat = parseFloat(p.get('lat') || '37.5665');
@@ -59,7 +60,9 @@ export async function GET(req: NextRequest) {
       return ok(normalized);
     }
 
-    return ok(applyExtraFilters(data || []));
+    const result = ok(applyExtraFilters(data || []));
+    result.headers.set('X-Response-Time', `${Date.now() - _t}ms`);
+    return result;
   } catch (err) { return handleError(err); }
 }
 
