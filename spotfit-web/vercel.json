@@ -4,6 +4,12 @@
   "outputDirectory": ".next",
   "installCommand": "npm ci",
   "regions": ["icn1"],
+  "crons": [
+    {
+      "path": "/api/admin/run-scheduler",
+      "schedule": "*/10 * * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/api/(.*)",

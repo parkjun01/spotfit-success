@@ -93,32 +93,14 @@ export async function POST(_req: NextRequest) {
   }
 }
 
-// 현재 스케줄러 대기 항목 수 확인
-export async function GET() {
-  try {
-    const now = new Date();
-    const noShowCutoff = new Date(now.getTime() - 30 * 60 * 1000).toISOString();
-    const autoCompleteCutoff = new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString();
+// Vercel Cron이 GET으로 호출 → 스케줄러 실행 (CRON_SECRET 검증)
+export async function GET(req: NextRequest) {
+  const secret = process.env.CRON_SECRET;
+  const auth = req.headers.get('authorization');
 
-    const [noShowRes, autoCompleteRes] = await Promise.all([
-      supabaseAdmin
-        .from('participations')
-        .select('spot_id, spots!inner(starts_at)', { count: 'exact', head: true })
-        .eq('status', 'joined')
-        .lt('spots.starts_at', noShowCutoff),
-      supabaseAdmin
-        .from('spots')
-        .select('id', { count: 'exact', head: true })
-        .in('status', ['recruiting', 'full', 'in_progress'])
-        .lt('starts_at', autoCompleteCutoff),
-    ]);
-
-    return ok({
-      checked_at: now.toISOString(),
-      pending_noshow: noShowRes.count ?? 0,
-      pending_auto_complete: autoCompleteRes.count ?? 0,
-    });
-  } catch (err) {
-    return handleError(err);
+  if (secret && auth !== `Bearer ${secret}`) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
   }
+
+  return POST(req);
 }
